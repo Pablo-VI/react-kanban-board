@@ -14,7 +14,8 @@ export type Column = {
 
 type BoardState = {
   columns: Column[];
-  addCard: (columnId: string, title: string) => void; 
+  addCard: (columnId: string, title: string) => void;
+  deleteCard: (columnId: string, cardId: string) => void;
   moveCard: (
     cardId: string,
     sourceColumnId: string,
@@ -74,7 +75,21 @@ export const useBoardStore = create<BoardState>((set) => ({
       return { columns: newColumns };
     }),
 
-  // Y aquí se define la acción moveCard (la única que se usará)
+  deleteCard: (columnId, cardId) =>
+    set((state) => {
+      const newColumns = [...state.columns];
+      const colIndex = newColumns.findIndex((col) => col.id === columnId);
+
+      if (colIndex === -1) return state;
+
+      // Filter out the card to be deleted
+      newColumns[colIndex].cards = newColumns[colIndex].cards.filter(
+        (card) => card.id !== cardId
+      );
+
+      return { columns: newColumns };
+    }),
+
   moveCard: (cardId, sourceColumnId, destColumnId, destIndex) =>
     set((state) => {
       const newColumns = [...state.columns];

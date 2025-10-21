@@ -6,9 +6,10 @@ type CardProps = {
   id: string;
   title: string;
   columnId: string;
+  onClick: () => void;
 };
 
-export function Card({ id, title, columnId }: CardProps) {
+export function Card({ id, title, columnId, onClick }: CardProps) {
   const deleteCard = useBoardStore((state) => state.deleteCard);
   const {
     attributes,
@@ -20,6 +21,7 @@ export function Card({ id, title, columnId }: CardProps) {
   } = useSortable({
     id: id,
     data: {
+      type: "Card", // <-- MODIFICACIÓN: Se añade el tipo
       columnId: columnId,
     },
   });
@@ -29,24 +31,24 @@ export function Card({ id, title, columnId }: CardProps) {
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
       : undefined,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0 : 1, // La tarjeta original se oculta al arrastrar
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
       {...attributes}
-      className="group bg-zinc-800 p-3 rounded-md border-2 border-zinc-700 shadow-sm cursor-grab active:cursor-grabbing flex justify-between items-center"
+      onClick={onClick}
+      className="group bg-zinc-800 p-3 rounded-md border-2 border-zinc-700 shadow-sm flex justify-between items-center"
     >
-      <p className="text-sm font-medium text-zinc-100">{title}</p>
-      {/* 4. Delete Button */}
+      <div {...listeners} className="flex-grow cursor-grab">
+        <p className="text-sm font-medium text-zinc-100">{title}</p>
+      </div>
       <button
-        // Make button invisible by default, and visible on parent hover
         className="opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={(e) => {
-          e.stopPropagation(); 
+          e.stopPropagation();
           deleteCard(columnId, id);
         }}
       >

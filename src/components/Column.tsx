@@ -11,22 +11,37 @@ type ColumnProps = {
   id: string;
   title: string;
   cards: CardType[];
+  activeCard: CardType | null;
+  onCardClick: (task: CardType, columnId: string) => void;
+  overColumnId: string | null; // <-- MODIFICACIÓN: Nueva prop
 };
 
-export function Column({ id, title, cards }: ColumnProps) {
+export function Column({
+  id,
+  title,
+  cards,
+  activeCard,
+  onCardClick,
+  overColumnId, // <-- MODIFICACIÓN: Nueva prop
+}: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: id,
     data: {
+      type: "Column", // <-- MODIFICACIÓN: Se añade el tipo
       columnId: id,
-      // Necesario para saber en qué índice soltar la tarjeta al moverla a OTRA columna
       index: cards.length,
     },
   });
 
-  // Extraemos los IDs de las tarjetas. SortableContext necesita un array de IDs.
   const cardIds = cards.map((card) => card.id);
 
-  const columnBackgroundColor = isOver ? "bg-zinc-800/60" : "bg-zinc-900/50";
+  // MODIFICACIÓN: Lógica de resaltado mejorada
+  const columnBackgroundColor =
+    isOver || overColumnId === id ? "bg-zinc-800/60" : "bg-zinc-900/50";
+
+  // MODIFICACIÓN: Lógica del placeholder mejorada
+  const showPlaceholder =
+    activeCard && (isOver || overColumnId === id) && activeCard.columnId !== id;
 
   return (
     <div
@@ -37,7 +52,6 @@ export function Column({ id, title, cards }: ColumnProps) {
         <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
       </div>
       <div className="p-3 space-y-3">
-        {/* Envolvemos las tarjetas en el SortableContext para que sean reordenables */}
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
             <Card
@@ -45,10 +59,14 @@ export function Column({ id, title, cards }: ColumnProps) {
               id={card.id}
               title={card.title}
               columnId={id}
-              // El prop 'index' ya no es necesario al usar useSortable en el componente Card
+              onClick={() => onCardClick(card, id)}
             />
           ))}
         </SortableContext>
+
+        {showPlaceholder && (
+          <div className="h-16 bg-zinc-700/50 rounded-md border-2 border-dashed border-blue-500"></div>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { create } from "zustand";
 export type Card = {
   id: string;
   title: string;
+  description?: string;
 };
 
 export type Column = {
@@ -15,7 +16,13 @@ export type Column = {
 type BoardState = {
   columns: Column[];
   addColumn: (title: string) => void;
-  addCard: (columnId: string, title: string) => void;
+  addCard: (columnId: string, title: string, description?: string) => void;
+  editCard: (
+    columnId: string,
+    cardId: string,
+    title: string,
+    description?: string
+  ) => void;
   deleteCard: (columnId: string, cardId: string) => void;
   moveCard: (
     cardId: string,
@@ -69,7 +76,7 @@ export const useBoardStore = create<BoardState>((set) => ({
     }),
 
   // Lógica para añadir una nueva tarjeta
-  addCard: (columnId, title) =>
+  addCard: (columnId, title, description) =>
     set((state) => {
       const newColumns = [...state.columns];
       const colIndex = newColumns.findIndex((col) => col.id === columnId);
@@ -77,13 +84,33 @@ export const useBoardStore = create<BoardState>((set) => ({
       if (colIndex === -1) return state; // No hacer nada si la columna no existe
 
       const newCard: Card = {
-        id: crypto.randomUUID(), // Genera un ID único
+        id: crypto.randomUUID(),
         title: title,
+        description: description,
       };
 
       // Añade la nueva tarjeta a la columna correspondiente
       newColumns[colIndex].cards.push(newCard);
 
+      return { columns: newColumns };
+    }),
+
+  editCard: (columnId, cardId, title, description) =>
+    set((state) => {
+      const newColumns = state.columns.map((column) => {
+        if (column.id === columnId) {
+          const newCards = column.cards.map((card) => {
+            if (card.id === cardId) {
+              // Devuelve la tarjeta actualizada
+              return { ...card, title, description };
+            }
+            return card;
+          });
+          // Devuelve la columna con las tarjetas actualizadas
+          return { ...column, cards: newCards };
+        }
+        return column;
+      });
       return { columns: newColumns };
     }),
 

@@ -1,4 +1,4 @@
-// src/App.tsx
+import { useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -13,6 +13,9 @@ function App() {
   const columns = useBoardStore((state) => state.columns);
   const moveCard = useBoardStore((state) => state.moveCard);
   const reorderCard = useBoardStore((state) => state.reorderCard);
+  const addCard = useBoardStore((state) => state.addCard);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -54,10 +57,50 @@ function App() {
     }
   }
 
+  const handleAddTask = () => {
+    if (newTaskTitle.trim() === "") return;
+    addCard("todo", newTaskTitle);
+    setNewTaskTitle("");
+    setIsAddingTask(false);
+  };
+
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="bg-zinc-950 text-white min-h-screen p-8 overflow-x-auto">
-        <h1 className="text-3xl font-bold mb-8">Mi Tablero Kanban</h1>
+        <header className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Mi Tablero Kanban</h1>
+          <button
+            onClick={() => setIsAddingTask(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Añadir Tarea
+          </button>
+        </header>
+        {/* 6. Formulario condicional */}
+        {isAddingTask && (
+          <div className="mb-4 p-4 bg-zinc-800 rounded-lg flex gap-4">
+            <input
+              type="text"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              placeholder="Introduce el título de la tarea..."
+              autoFocus
+              className="bg-zinc-700 text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handleAddTask}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Añadir
+            </button>
+            <button
+              onClick={() => setIsAddingTask(false)}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
         <main className="flex gap-6">
           {columns.map((column) => (
             <Column

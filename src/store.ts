@@ -14,6 +14,7 @@ export type Column = {
 
 type BoardState = {
   columns: Column[];
+  addColumn: (title: string) => void;
   addCard: (columnId: string, title: string) => void;
   deleteCard: (columnId: string, cardId: string) => void;
   moveCard: (
@@ -55,6 +56,17 @@ const initialState = {
 // Zustand se encarga de combinar el estado inicial con las acciones
 export const useBoardStore = create<BoardState>((set) => ({
   ...initialState,
+
+  // Lógica para añadir una nueva columna
+  addColumn: (title) =>
+    set((state) => {
+      const newColumn: Column = {
+        id: crypto.randomUUID(), // ID único para la columna
+        title: title,
+        cards: [], // Las columnas nuevas empiezan sin tarjetas
+      };
+      return { columns: [...state.columns, newColumn] };
+    }),
 
   // Lógica para añadir una nueva tarjeta
   addCard: (columnId, title) =>

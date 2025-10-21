@@ -7,6 +7,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Column } from "./components/Column";
+import { AddColumnForm } from "./components/AddColumnForm";
 import { useBoardStore } from "./store";
 
 function App() {
@@ -110,6 +111,7 @@ function App() {
               cards={column.cards}
             />
           ))}
+          <AddColumnForm />
         </main>
       </div>
     </DndContext>

@@ -1,5 +1,6 @@
 // src/store.ts
 import { create } from "zustand";
+import { supabase } from "./supabase";
 
 export type Card = {
   id: string;
@@ -15,15 +16,20 @@ export type Column = {
 
 type BoardState = {
   columns: Column[];
-  addColumn: (title: string) => void;
-  addCard: (columnId: string, title: string, description?: string) => void;
+  fetchBoard: () => Promise<void>;
+  addColumn: (title: string) => Promise<void>;
+  addCard: (
+    columnId: string,
+    title: string,
+    description?: string
+  ) => Promise<void>;
   editCard: (
     columnId: string,
     cardId: string,
     title: string,
     description?: string
-  ) => void;
-  deleteCard: (columnId: string, cardId: string) => void;
+  ) => Promise<void>;
+  deleteCard: (columnId: string, cardId: string) => Promise<void>;
   moveCard: (
     cardId: string,
     sourceColumnId: string,
@@ -37,98 +43,138 @@ type BoardState = {
   ) => void;
 };
 
-const initialState = {
-  columns: [
-    {
-      id: "todo",
-      title: "Por Hacer 📝",
-      cards: [
-        { id: "1", title: "Revisar diseño de la nueva landing page" },
-        { id: "2", title: "Crear componentes de UI básicos" },
-      ],
-    },
-    {
-      id: "in-progress",
-      title: "En Progreso 👨‍💻",
-      cards: [{ id: "3", title: "Implementar autenticación con Supabase" }],
-    },
-    {
-      id: "done",
-      title: "Hecho ✅",
-      cards: [{ id: "4", title: "Configurar el proyecto con Vite y Tailwind" }],
-    },
-  ],
-};
-
-// Zustand se encarga de combinar el estado inicial con las acciones
 export const useBoardStore = create<BoardState>((set) => ({
-  ...initialState,
+  columns: [],
 
-  // Lógica para añadir una nueva columna
-  addColumn: (title) =>
+  fetchBoard: async () => {
+    const { data: columnsData, error } = await supabase
+      .from("columns")
+      .select("id, title, cards ( id, title, description )")
+      .order("id", { ascending: true });
+
+    if (error) {
+      console.error("Error al cargar el tablero:", error);
+      return;
+    }
+    if (!columnsData) {
+      set({ columns: [] });
+      return;
+    }
+
+    const formattedColumns: Column[] = columnsData.map((col) => ({
+      ...col,
+      id: col.id.toString(),
+      cards: col.cards.map((card) => ({
+        ...card,
+        id: card.id.toString(),
+      })),
+    }));
+    set({ columns: formattedColumns });
+  },
+
+  addColumn: async (title) => {
+    const { data, error } = await supabase
+      .from("columns")
+      .insert({ title: title })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error("Error al añadir columna:", error);
+      return;
+    }
+
+    const newColumn: Column = {
+      id: data.id.toString(),
+      title: data.title,
+      cards: [],
+    };
+    set((state) => ({ columns: [...state.columns, newColumn] }));
+  },
+
+  addCard: async (columnId, title, description) => {
+    const { data, error } = await supabase
+      .from("cards")
+      .insert({ title, description, column_id: parseInt(columnId) })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error("Error al añadir tarjeta:", error);
+      return;
+    }
+
+    const newCard: Card = {
+      id: data.id.toString(),
+      title: data.title,
+      description: data.description || undefined,
+    };
     set((state) => {
-      const newColumn: Column = {
-        id: crypto.randomUUID(), // ID único para la columna
-        title: title,
-        cards: [], // Las columnas nuevas empiezan sin tarjetas
-      };
-      return { columns: [...state.columns, newColumn] };
-    }),
-
-  // Lógica para añadir una nueva tarjeta
-  addCard: (columnId, title, description) =>
-    set((state) => {
-      const newColumns = [...state.columns];
-      const colIndex = newColumns.findIndex((col) => col.id === columnId);
-
-      if (colIndex === -1) return state; // No hacer nada si la columna no existe
-
-      const newCard: Card = {
-        id: crypto.randomUUID(),
-        title: title,
-        description: description,
-      };
-
-      // Añade la nueva tarjeta a la columna correspondiente
-      newColumns[colIndex].cards.push(newCard);
-
+      const newColumns = state.columns.map((col) => {
+        if (col.id === columnId) {
+          return { ...col, cards: [...col.cards, newCard] };
+        }
+        return col;
+      });
       return { columns: newColumns };
-    }),
+    });
+  },
 
-  editCard: (columnId, cardId, title, description) =>
+  editCard: async (columnId, cardId, title, description) => {
+    const { error } = await supabase
+      .from("cards")
+      .update({ title, description })
+      .eq("id", parseInt(cardId));
+
+    if (error) {
+      console.error("Error al editar tarjeta:", error);
+      return;
+    }
+
     set((state) => {
       const newColumns = state.columns.map((column) => {
         if (column.id === columnId) {
           const newCards = column.cards.map((card) => {
             if (card.id === cardId) {
-              // Devuelve la tarjeta actualizada
               return { ...card, title, description };
             }
             return card;
           });
-          // Devuelve la columna con las tarjetas actualizadas
           return { ...column, cards: newCards };
         }
         return column;
       });
       return { columns: newColumns };
-    }),
+    });
+  },
 
-  deleteCard: (columnId, cardId) =>
+  deleteCard: async (columnId, cardId) => {
+    const { error } = await supabase
+      .from("cards")
+      .delete()
+      .eq("id", parseInt(cardId));
+
+    if (error) {
+      console.error("Error al borrar tarjeta:", error);
+      return;
+    }
+
     set((state) => {
-      const newColumns = [...state.columns];
-      const colIndex = newColumns.findIndex((col) => col.id === columnId);
-
-      if (colIndex === -1) return state;
-
-      // Filter out the card to be deleted
-      newColumns[colIndex].cards = newColumns[colIndex].cards.filter(
-        (card) => card.id !== cardId
-      );
-
+      const newColumns = state.columns.map((col) => {
+        if (col.id === columnId) {
+          return {
+            ...col,
+            cards: col.cards.filter((card) => card.id !== cardId),
+          };
+        }
+        return col;
+      });
       return { columns: newColumns };
-    }),
+    });
+  },
 
+  // Por ahora, estas acciones solo afectan al estado local para mantener la fluidez.
+  // Sincronizarlas con el backend es más complejo y un buen siguiente paso.
   moveCard: (cardId, sourceColumnId, destColumnId, destIndex) =>
     set((state) => {
       const newColumns = [...state.columns];
@@ -138,21 +184,15 @@ export const useBoardStore = create<BoardState>((set) => ({
       const destColIndex = newColumns.findIndex(
         (col) => col.id === destColumnId
       );
-
       if (sourceColIndex === -1 || destColIndex === -1) return state;
-
       const sourceCol = { ...newColumns[sourceColIndex] };
       const cardIndex = sourceCol.cards.findIndex((card) => card.id === cardId);
-
       if (cardIndex === -1) return state;
-
       const [movedCard] = sourceCol.cards.splice(cardIndex, 1);
       newColumns[sourceColIndex] = sourceCol;
-
       const destCol = { ...newColumns[destColIndex] };
       destCol.cards.splice(destIndex, 0, movedCard);
       newColumns[destColIndex] = destCol;
-
       return { columns: newColumns };
     }),
 
@@ -160,20 +200,12 @@ export const useBoardStore = create<BoardState>((set) => ({
     set((state) => {
       const newColumns = [...state.columns];
       const colIndex = newColumns.findIndex((col) => col.id === columnId);
-
-      if (colIndex === -1) return state; // Columna no encontrada
-
+      if (colIndex === -1) return state;
       const column = { ...newColumns[colIndex] };
       const newCards = [...column.cards];
-
-      // Quita la tarjeta de su posición original
       const [movedCard] = newCards.splice(sourceIndex, 1);
-      // Inserta la tarjeta en su nueva posición
       newCards.splice(destIndex, 0, movedCard);
-
-      // Actualiza la columna con el nuevo array de tarjetas
       newColumns[colIndex] = { ...column, cards: newCards };
-
       return { columns: newColumns };
     }),
 }));

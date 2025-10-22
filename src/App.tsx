@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
   type DragEndEvent,
-  type DragOverEvent, // <-- MODIFICACIÓN: Importado
+  type DragOverEvent,
   type DragStartEvent,
   PointerSensor,
   useSensor,
@@ -16,6 +16,7 @@ import { TaskModal } from "./components/TaskModal";
 import { Card } from "./components/Card";
 
 function App() {
+  const fetchBoard = useBoardStore((state) => state.fetchBoard);
   const columns = useBoardStore((state) => state.columns);
   const moveCard = useBoardStore((state) => state.moveCard);
   const reorderCard = useBoardStore((state) => state.reorderCard);
@@ -26,6 +27,10 @@ function App() {
     (CardType & { columnId: string }) | null
   >(null);
   const [overColumnId, setOverColumnId] = useState<string | null>(null); // <-- MODIFICACIÓN: Nuevo estado
+
+  useEffect(() => {
+    fetchBoard();
+  }, [fetchBoard]);
 
   const handleOpenCreateModal = (columnId: string) => {
     setTargetColumn(columnId);

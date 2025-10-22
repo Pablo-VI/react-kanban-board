@@ -30,4 +30,5 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: dist # La carpeta del build que se va a desplegar
+          folder: dist
+          clean: true

@@ -1,6 +1,6 @@
 # .github/workflows/deploy.yml
 
-name: Deploy Dev Branch to GitHub Pages
+name: Deploy Dev main to GitHub Pages
 
 on:
   push:

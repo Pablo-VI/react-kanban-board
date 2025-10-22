@@ -1,19 +1,24 @@
 # .github/workflows/deploy.yml
 
-name: Deploy to GitHub Pages
+name: Deploy Dev Branch to GitHub Pages
 
 on:
   push:
     branches:
       - main
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install and Build 🔧
+        working-directory: ./
         run: |
           npm install
           npm run build
@@ -24,5 +29,5 @@ jobs:
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages # La rama donde se despliega
-          folder: dist # La carpeta que se genera con el build
+          branch: gh-pages
+          folder: dist # La carpeta del build que se va a desplegar

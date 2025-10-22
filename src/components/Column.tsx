@@ -11,9 +11,9 @@ type ColumnProps = {
   id: string;
   title: string;
   cards: CardType[];
-  activeCard: CardType | null;
   onCardClick: (task: CardType, columnId: string) => void;
-  overColumnId: string | null; // <-- MODIFICACIÓN: Nueva prop
+  activeCard: (CardType & { columnId: string }) | null;
+  overColumnId: string | null;
 };
 
 export function Column({

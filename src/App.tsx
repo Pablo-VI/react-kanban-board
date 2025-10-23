@@ -159,12 +159,15 @@ function App() {
       <div className="bg-zinc-950 text-white min-h-screen p-8 overflow-x-auto">
         <header className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Mi Tablero Kanban</h1>
-          <button
-            onClick={() => handleOpenCreateModal("todo")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Añadir Tarea
-          </button>
+          {columns.length > 0 && (
+            <button
+              // Usamos el ID de la primera columna disponible, que siempre será válido
+              onClick={() => handleOpenCreateModal(columns[0].id)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Añadir Tarea
+            </button>
+          )}{" "}
         </header>
         <main className="flex gap-6">
           {columns.map((column) => (

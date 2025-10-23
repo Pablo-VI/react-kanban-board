@@ -1,21 +1,29 @@
 // src/components/TaskModal.tsx
 import { useEffect, useState, useRef } from "react";
-import { useBoardStore, type Card } from "../store";
+import { useBoardStore, type Card, type Column } from "../store"; // Importa el tipo Column
 
 type TaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
   task: Card | null;
-  columnId: string;
+  initialColumnId: string; // Renombrado para mayor claridad
+  columns: Column[]; // <-- AÑADIDO: Recibimos todas las columnas
 };
 
-export function TaskModal({ isOpen, onClose, task, columnId }: TaskModalProps) {
+export function TaskModal({
+  isOpen,
+  onClose,
+  task,
+  initialColumnId,
+  columns,
+}: TaskModalProps) {
   const { addCard, editCard } = useBoardStore();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  // AÑADIDO: Nuevo estado para la columna seleccionada
+  const [selectedColumnId, setSelectedColumnId] = useState(initialColumnId);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // Sincroniza el estado del modal con el del componente
   useEffect(() => {
     if (isOpen) {
       dialogRef.current?.showModal();
@@ -24,26 +32,25 @@ export function TaskModal({ isOpen, onClose, task, columnId }: TaskModalProps) {
     }
   }, [isOpen]);
 
-  // Rellena el formulario cuando se edita una tarea
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
     } else {
-      // Resetea el formulario para crear una nueva tarea
+      // Al crear, reseteamos y establecemos la columna por defecto
       setTitle("");
       setDescription("");
+      setSelectedColumnId(initialColumnId);
     }
-  }, [task, isOpen]);
+  }, [task, isOpen, initialColumnId]);
 
   const handleSave = () => {
     if (title.trim() === "") return;
     if (task) {
-      // Modo Edición
-      editCard(columnId, task.id, title, description);
+      editCard(task.id, title, description);
     } else {
-      // Modo Creación
-      addCard(columnId, title, description);
+      // CAMBIADO: Usamos el ID de la columna seleccionada
+      addCard(selectedColumnId, title, description);
     }
     onClose();
   };
@@ -72,6 +79,30 @@ export function TaskModal({ isOpen, onClose, task, columnId }: TaskModalProps) {
           rows={4}
           className="bg-zinc-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         ></textarea>
+
+        {/* 👇 ¡AQUÍ ESTÁ LA MAGIA! El nuevo selector 👇 */}
+        {!task && (
+          <div>
+            <label
+              htmlFor="column-select"
+              className="block text-sm font-medium text-zinc-400 mb-1"
+            >
+              Columna
+            </label>
+            <select
+              id="column-select"
+              value={selectedColumnId}
+              onChange={(e) => setSelectedColumnId(e.target.value)}
+              className="bg-zinc-700 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {columns.map((col) => (
+                <option key={col.id} value={col.id}>
+                  {col.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="mt-6 flex justify-end gap-4">
         <button

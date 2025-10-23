@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "./supabase";
 import {
   DndContext,
   DragOverlay,
@@ -31,6 +32,34 @@ function App() {
   useEffect(() => {
     fetchBoard();
   }, [fetchBoard]);
+
+  useEffect(() => {
+    // Escuchamos cualquier cambio (insert, update, delete) en las tablas
+    const channel = supabase
+      .channel("realtime-kanban")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cards" },
+        (payload) => {
+          console.log("Cambio detectado en cards:", payload);
+          fetchBoard(); // Recargamos el tablero para reflejar el cambio
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "columns" },
+        (payload) => {
+          console.log("Cambio detectado en columns:", payload);
+          fetchBoard();
+        }
+      )
+      .subscribe();
+
+    // Función de limpieza: se ejecuta cuando el componente se desmonta
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchBoard]); // El efecto depende de la función fetchBoard
 
   const handleOpenCreateModal = (columnId: string) => {
     setTargetColumn(columnId);
@@ -137,7 +166,6 @@ function App() {
             Añadir Tarea
           </button>
         </header>
-
         <main className="flex gap-6">
           {columns.map((column) => (
             <Column
@@ -152,7 +180,6 @@ function App() {
           ))}
           <AddColumnForm />
         </main>
-
         <DragOverlay>
           {activeCard ? (
             <Card
@@ -163,13 +190,13 @@ function App() {
             />
           ) : null}
         </DragOverlay>
-
         <TaskModal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           task={editingTask}
-          columnId={targetColumn}
-        />
+          initialColumnId={targetColumn}
+          columns={columns}
+        />{" "}
       </div>
     </DndContext>
   );

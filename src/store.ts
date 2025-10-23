@@ -6,6 +6,7 @@ export type Card = {
   id: string;
   title: string;
   description?: string;
+  card_order?: number;
 };
 
 export type Column = {
@@ -23,34 +24,40 @@ type BoardState = {
     title: string,
     description?: string
   ) => Promise<void>;
+  // CAMBIO AQUÍ: Eliminado el parámetro 'columnId' que no se usa
   editCard: (
-    columnId: string,
     cardId: string,
     title: string,
     description?: string
   ) => Promise<void>;
-  deleteCard: (columnId: string, cardId: string) => Promise<void>;
+  // CAMBIO AQUÍ: Eliminado el parámetro 'columnId' que no se usa
+  deleteCard: (cardId: string) => Promise<void>;
   moveCard: (
     cardId: string,
     sourceColumnId: string,
     destColumnId: string,
     destIndex: number
-  ) => void;
+  ) => Promise<void>;
   reorderCard: (
     columnId: string,
     sourceIndex: number,
     destIndex: number
-  ) => void;
+  ) => Promise<void>;
+  // CAMBIO AQUÍ: Añadimos la función interna al tipo para que TS la reconozca
+  _updateCardOrders: (
+    cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
+  ) => Promise<void>;
 };
 
-export const useBoardStore = create<BoardState>((set) => ({
+export const useBoardStore = create<BoardState>((set, get) => ({
   columns: [],
 
   fetchBoard: async () => {
     const { data: columnsData, error } = await supabase
       .from("columns")
-      .select("id, title, cards ( id, title, description )")
-      .order("id", { ascending: true });
+      .select("id, title, cards ( id, title, description, card_order )")
+      .order("id", { ascending: true })
+      .order("card_order", { foreignTable: "cards", ascending: true });
 
     if (error) {
       console.error("Error al cargar el tablero:", error);
@@ -60,7 +67,6 @@ export const useBoardStore = create<BoardState>((set) => ({
       set({ columns: [] });
       return;
     }
-
     const formattedColumns: Column[] = columnsData.map((col) => ({
       ...col,
       id: col.id.toString(),
@@ -73,54 +79,51 @@ export const useBoardStore = create<BoardState>((set) => ({
   },
 
   addColumn: async (title) => {
-    const { data, error } = await supabase
-      .from("columns")
-      .insert({ title: title })
-      .select()
-      .single();
+    // La lógica de inserción en la base de datos es correcta.
+    const { error } = await supabase.from("columns").insert({ title: title });
 
-    if (error || !data) {
+    if (error) {
       console.error("Error al añadir columna:", error);
-      return;
     }
-
-    const newColumn: Column = {
-      id: data.id.toString(),
-      title: data.title,
-      cards: [],
-    };
-    set((state) => ({ columns: [...state.columns, newColumn] }));
   },
 
   addCard: async (columnId, title, description) => {
-    const { data, error } = await supabase
-      .from("cards")
-      .insert({ title, description, column_id: parseInt(columnId) })
-      .select()
-      .single();
+    // Checkpoint 2: ¿Llega la llamada hasta el store?
+    console.log("2. Función addCard en el store iniciada.");
+    console.log("   - Recibido Column ID:", columnId);
 
-    if (error || !data) {
-      console.error("Error al añadir tarjeta:", error);
+    const { columns } = get();
+    const targetColumn = columns.find((c) => c.id === columnId);
+    if (!targetColumn) {
+      console.error(
+        "ERROR: No se encontró la columna de destino. La operación se detiene."
+      );
       return;
     }
 
-    const newCard: Card = {
-      id: data.id.toString(),
-      title: data.title,
-      description: data.description || undefined,
+    const newOrder = targetColumn.cards.length;
+    const cardToInsert = {
+      title,
+      description,
+      column_id: parseInt(columnId),
+      card_order: newOrder,
     };
-    set((state) => {
-      const newColumns = state.columns.map((col) => {
-        if (col.id === columnId) {
-          return { ...col, cards: [...col.cards, newCard] };
-        }
-        return col;
-      });
-      return { columns: newColumns };
-    });
-  },
 
-  editCard: async (columnId, cardId, title, description) => {
+    // Checkpoint 3: ¿Qué estamos intentando insertar?
+    console.log("3. Intentando insertar en Supabase:", cardToInsert);
+
+    const { error } = await supabase.from("cards").insert(cardToInsert);
+
+    // ¡Checkpoint 4: El log MÁS IMPORTANTE! ¿Qué respondió Supabase?
+    console.log("4. Respuesta de Supabase a la inserción:", { error });
+
+    if (error) {
+      console.error("Error explícito de Supabase al añadir tarjeta:", error);
+      return;
+    }
+  },
+  editCard: async (cardId, title, description) => {
+    // La lógica de actualización de la base de datos es correcta.
     const { error } = await supabase
       .from("cards")
       .update({ title, description })
@@ -128,27 +131,11 @@ export const useBoardStore = create<BoardState>((set) => ({
 
     if (error) {
       console.error("Error al editar tarjeta:", error);
-      return;
     }
-
-    set((state) => {
-      const newColumns = state.columns.map((column) => {
-        if (column.id === columnId) {
-          const newCards = column.cards.map((card) => {
-            if (card.id === cardId) {
-              return { ...card, title, description };
-            }
-            return card;
-          });
-          return { ...column, cards: newCards };
-        }
-        return column;
-      });
-      return { columns: newColumns };
-    });
   },
 
-  deleteCard: async (columnId, cardId) => {
+  deleteCard: async (cardId) => {
+    // La lógica de borrado de la base de datos es correcta.
     const { error } = await supabase
       .from("cards")
       .delete()
@@ -156,56 +143,99 @@ export const useBoardStore = create<BoardState>((set) => ({
 
     if (error) {
       console.error("Error al borrar tarjeta:", error);
-      return;
     }
-
-    set((state) => {
-      const newColumns = state.columns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            cards: col.cards.filter((card) => card.id !== cardId),
-          };
-        }
-        return col;
-      });
-      return { columns: newColumns };
-    });
   },
 
-  // Por ahora, estas acciones solo afectan al estado local para mantener la fluidez.
-  // Sincronizarlas con el backend es más complejo y un buen siguiente paso.
-  moveCard: (cardId, sourceColumnId, destColumnId, destIndex) =>
-    set((state) => {
-      const newColumns = [...state.columns];
-      const sourceColIndex = newColumns.findIndex(
-        (col) => col.id === sourceColumnId
-      );
-      const destColIndex = newColumns.findIndex(
-        (col) => col.id === destColumnId
-      );
-      if (sourceColIndex === -1 || destColIndex === -1) return state;
-      const sourceCol = { ...newColumns[sourceColIndex] };
-      const cardIndex = sourceCol.cards.findIndex((card) => card.id === cardId);
-      if (cardIndex === -1) return state;
-      const [movedCard] = sourceCol.cards.splice(cardIndex, 1);
-      newColumns[sourceColIndex] = sourceCol;
-      const destCol = { ...newColumns[destColIndex] };
-      destCol.cards.splice(destIndex, 0, movedCard);
-      newColumns[destColIndex] = destCol;
-      return { columns: newColumns };
-    }),
+  // ########## LÓGICA DE MOVIMIENTO ACTUALIZADA ##########
 
-  reorderCard: (columnId, sourceIndex, destIndex) =>
-    set((state) => {
-      const newColumns = [...state.columns];
-      const colIndex = newColumns.findIndex((col) => col.id === columnId);
-      if (colIndex === -1) return state;
-      const column = { ...newColumns[colIndex] };
-      const newCards = [...column.cards];
-      const [movedCard] = newCards.splice(sourceIndex, 1);
-      newCards.splice(destIndex, 0, movedCard);
-      newColumns[colIndex] = { ...column, cards: newCards };
-      return { columns: newColumns };
-    }),
+  // Función interna para actualizar el orden de las tarjetas en la BD
+  _updateCardOrders: async (
+    cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
+  ) => {
+    if (cardsToUpdate.length === 0) return;
+
+    for (const card of cardsToUpdate) {
+      const { error } = await supabase
+        .from("cards")
+        .update({
+          card_order: card.card_order,
+          column_id: card.column_id
+            ? parseInt(String(card.column_id))
+            : undefined,
+        })
+        .eq("id", parseInt(card.id));
+
+      if (error) {
+        console.error("Error al actualizar el orden de una tarjeta:", error);
+        break;
+      }
+    }
+  },
+
+  reorderCard: async (columnId, sourceIndex, destIndex) => {
+    // 1. Actualización optimista de la UI (la UI se actualiza al instante)
+    const originalColumns = get().columns;
+    const colIndex = originalColumns.findIndex((col) => col.id === columnId);
+    if (colIndex === -1) return;
+    const column = { ...originalColumns[colIndex] };
+    const newCards = [...column.cards];
+    const [movedCard] = newCards.splice(sourceIndex, 1);
+    newCards.splice(destIndex, 0, movedCard);
+    const updatedColumns = [...originalColumns];
+    updatedColumns[colIndex] = { ...column, cards: newCards };
+    set({ columns: updatedColumns });
+
+    // 2. Sincronización con la base de datos
+    const cardsToUpdate = newCards.map((card, index) => ({
+      id: card.id,
+      card_order: index,
+    }));
+    await get()._updateCardOrders(cardsToUpdate);
+  },
+
+  moveCard: async (cardId, sourceColumnId, destColumnId, destIndex) => {
+    // 1. Actualización optimista de la UI
+    const originalColumns = get().columns;
+    const newColumns = [...originalColumns];
+    const sourceColIndex = newColumns.findIndex(
+      (col) => col.id === sourceColumnId
+    );
+    const destColIndex = newColumns.findIndex((col) => col.id === destColumnId);
+    if (sourceColIndex === -1 || destColIndex === -1) return;
+
+    const sourceCol = { ...newColumns[sourceColIndex] };
+    const cardIndex = sourceCol.cards.findIndex((card) => card.id === cardId);
+    if (cardIndex === -1) return;
+
+    const [movedCard] = sourceCol.cards.splice(cardIndex, 1);
+    newColumns[sourceColIndex] = sourceCol;
+
+    const destCol = { ...newColumns[destColIndex] };
+    destCol.cards.splice(destIndex, 0, movedCard);
+    newColumns[destColIndex] = destCol;
+
+    set({ columns: newColumns });
+
+    // 2. Sincronización con la base de datos
+    const sourceCardsToUpdate = newColumns[sourceColIndex].cards.map(
+      (card, index) => ({
+        id: card.id,
+        card_order: index,
+      })
+    );
+
+    const destCardsToUpdate = newColumns[destColIndex].cards.map(
+      (card, index) => ({
+        id: card.id,
+        card_order: index,
+        column_id: parseInt(destColumnId), // Aseguramos que la tarjeta movida tenga la nueva column_id
+      })
+    );
+
+    // Combinamos y actualizamos todo en una sola llamada
+    await get()._updateCardOrders([
+      ...sourceCardsToUpdate,
+      ...destCardsToUpdate,
+    ]);
+  },
 }));

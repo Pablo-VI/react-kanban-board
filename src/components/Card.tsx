@@ -49,7 +49,7 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
         className="opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={(e) => {
           e.stopPropagation();
-          deleteCard(columnId, id);
+          deleteCard(id);
         }}
       >
         🗑️

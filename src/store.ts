@@ -53,9 +53,20 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   columns: [],
 
   fetchBoard: async () => {
+    // 1. Obtenemos el usuario actual
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      set({ columns: [] }); // Si no hay usuario, el tablero está vacío
+      return;
+    }
+
+    // 2. Pedimos solo las columnas cuyo user_id coincida con el del usuario
     const { data: columnsData, error } = await supabase
       .from("columns")
       .select("id, title, cards ( id, title, description, card_order )")
+      .eq("user_id", user.id) // 👈 ¡LA CLAVE ESTÁ AQUÍ!
       .order("id", { ascending: true })
       .order("card_order", { foreignTable: "cards", ascending: true });
 
@@ -79,8 +90,21 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   addColumn: async (title) => {
-    // La lógica de inserción en la base de datos es correcta.
-    const { error } = await supabase.from("columns").insert({ title: title });
+    // 1. Obtenemos el usuario para saber a quién pertenece la nueva columna
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      console.error(
+        "Error: Se necesita estar logueado para añadir una columna."
+      );
+      return;
+    }
+
+    // 2. Al insertar, incluimos el user_id
+    const { error } = await supabase
+      .from("columns")
+      .insert({ title: title, user_id: user.id }); // 👈 ¡AÑADIMOS EL DUEÑO!
 
     if (error) {
       console.error("Error al añadir columna:", error);

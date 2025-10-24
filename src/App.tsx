@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import {
@@ -15,8 +16,40 @@ import { AddColumnForm } from "./components/AddColumnForm";
 import { useBoardStore, type Card as CardType } from "./store";
 import { TaskModal } from "./components/TaskModal";
 import { Card } from "./components/Card";
+import { AuthPage } from "./components/AuthPage"; // 👈 1. Importa la página de autenticación
+import type { Session } from "@supabase/supabase-js";
 
 function App() {
+  const [session, setSession] = useState<Session | null>(null); // 👈 2. Estado para la sesión
+
+  // 👇 3. Este useEffect gestiona la sesión del usuario
+  useEffect(() => {
+    // Comprueba la sesión activa al cargar la página
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Escucha los cambios de autenticación (login, logout)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    // Limpia la suscripción al desmontar el componente
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 🤯 ¡La lógica principal! Muestra AuthPage o el tablero.
+  if (!session) {
+    return <AuthPage />;
+  } else {
+    return <Board key={session.user.id} />; // Usamos un componente Board para el tablero
+  }
+}
+
+// 👇 4. Todo el código de tu tablero ahora vive en este componente
+function Board() {
   const fetchBoard = useBoardStore((state) => state.fetchBoard);
   const columns = useBoardStore((state) => state.columns);
   const moveCard = useBoardStore((state) => state.moveCard);
@@ -27,39 +60,31 @@ function App() {
   const [activeCard, setActiveCard] = useState<
     (CardType & { columnId: string }) | null
   >(null);
-  const [overColumnId, setOverColumnId] = useState<string | null>(null); // <-- MODIFICACIÓN: Nuevo estado
+  const [overColumnId, setOverColumnId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBoard();
   }, [fetchBoard]);
 
   useEffect(() => {
-    // Escuchamos cualquier cambio (insert, update, delete) en las tablas
     const channel = supabase
       .channel("realtime-kanban")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "cards" },
-        (payload) => {
-          console.log("Cambio detectado en cards:", payload);
-          fetchBoard(); // Recargamos el tablero para reflejar el cambio
-        }
+        () => fetchBoard()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "columns" },
-        (payload) => {
-          console.log("Cambio detectado en columns:", payload);
-          fetchBoard();
-        }
+        () => fetchBoard()
       )
       .subscribe();
 
-    // Función de limpieza: se ejecuta cuando el componente se desmonta
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchBoard]); // El efecto depende de la función fetchBoard
+  }, [fetchBoard]);
 
   const handleOpenCreateModal = (columnId: string) => {
     setTargetColumn(columnId);
@@ -96,19 +121,15 @@ function App() {
     }
   };
 
-  // <-- MODIFICACIÓN: Nueva función
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event;
     if (!over) return;
-
     const overId = over.id as string;
     const overIsColumn = over.data.current?.type === "Column";
-
     if (overIsColumn) {
       setOverColumnId(overId);
       return;
     }
-
     const overIsCard = over.data.current?.type === "Card";
     if (overIsCard) {
       const overColumn = over.data.current?.columnId as string;
@@ -123,10 +144,8 @@ function App() {
       setOverColumnId(null);
       return;
     }
-
     const sourceColumnId = active.data.current?.columnId as string;
     const destColumnId = over.data.current?.columnId as string;
-
     if (sourceColumnId === destColumnId) {
       const cardId = active.id as string;
       const overId = over.id as string;
@@ -144,30 +163,37 @@ function App() {
         moveCard(cardId, sourceColumnId, destColumnId, destIndex);
       }
     }
-
     setActiveCard(null);
-    setOverColumnId(null); // <-- MODIFICACIÓN: Limpiar estado
+    setOverColumnId(null);
   }
 
   return (
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver} // <-- MODIFICACIÓN: Añadido
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="bg-zinc-950 text-white min-h-screen p-8 overflow-x-auto">
         <header className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Mi Tablero Kanban</h1>
-          {columns.length > 0 && (
+          {/* 👇 5. Contenedor para los botones de la cabecera */}
+          <div className="flex items-center gap-4">
+            {columns.length > 0 && (
+              <button
+                onClick={() => handleOpenCreateModal(columns[0].id)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Añadir Tarea
+              </button>
+            )}
             <button
-              // Usamos el ID de la primera columna disponible, que siempre será válido
-              onClick={() => handleOpenCreateModal(columns[0].id)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              onClick={() => supabase.auth.signOut()}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
             >
-              Añadir Tarea
+              Cerrar Sesión
             </button>
-          )}{" "}
+          </div>
         </header>
         <main className="flex gap-6">
           {columns.map((column) => (
@@ -178,7 +204,7 @@ function App() {
               cards={column.cards}
               activeCard={activeCard}
               onCardClick={handleOpenEditModal}
-              overColumnId={overColumnId} // <-- MODIFICACIÓN: Prop añadida
+              overColumnId={overColumnId}
             />
           ))}
           <AddColumnForm />
@@ -199,7 +225,7 @@ function App() {
           task={editingTask}
           initialColumnId={targetColumn}
           columns={columns}
-        />{" "}
+        />
       </div>
     </DndContext>
   );

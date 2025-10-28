@@ -176,7 +176,7 @@ function Board() {
     >
       <div className="bg-zinc-950 text-white min-h-screen p-8 overflow-x-auto">
         <header className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Mi Tablero Kanban</h1>
+          <h1 className="text-3xl font-bold">Kanba</h1>
           {/* 👇 5. Contenedor para los botones de la cabecera */}
           <div className="flex items-center gap-4">
             {columns.length > 0 && (

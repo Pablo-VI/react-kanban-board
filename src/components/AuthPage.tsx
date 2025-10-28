@@ -1,24 +1,8 @@
 import React, { useState } from "react";
-import { supabase } from "../supabase"; // Asegúrate de que la ruta sea correcta
+import { supabase } from "../supabase";
 
-// --- Iconos SVG Simples (Reemplazo de Font Awesome) ---
-const UserIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-5 h-5"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-    />
-  </svg>
-);
-
+// --- Iconos SVG ---
+// (EmailIcon, LockIcon, GoogleIcon, GitHubIcon se mantienen igual que antes)
 const EmailIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -88,16 +72,58 @@ const GitHubIcon = () => (
     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
   </svg>
 );
+
+// NUEVOS ICONOS para mostrar/ocultar contraseña
+const EyeOpenIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="w-5 h-5"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+    />
+  </svg>
+);
+
+const EyeClosedIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="w-5 h-5"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L6.228 6.228"
+    />
+  </svg>
+);
 // --- Fin Iconos SVG ---
 
 export function AuthPage() {
-  const [tab, setTab] = useState<"signup" | "login">("signup");
+  // CAMBIO: Pestaña por defecto ahora es 'login'
+  const [tab, setTab] = useState<"signup" | "login">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState(""); // NUEVO ESTADO
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // NUEVO ESTADO para controlar la visibilidad de la contraseña
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -108,26 +134,19 @@ export function AuthPage() {
     try {
       if (tab === "signup") {
         const { error: signUpError } = await supabase.auth.signUp({
-          // FUNCIÓN MODIFICADA
           email,
           password,
-          options: {
-            data: {
-              username: username,
-            },
-          },
         });
         if (signUpError) throw signUpError;
         setMessage("¡Registro exitoso! Ya puedes iniciar sesión.");
-        setTab("login"); // Cambia a la pestaña de login después del registro
+        setTab("login");
+        setShowPassword(false); // Resetear visibilidad al cambiar de formulario
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (signInError) throw signInError;
-        // El inicio de sesión exitoso redirigirá o actualizará el estado de la app principal
-        // No necesitamos mensaje aquí si la redirección es automática
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -141,20 +160,21 @@ export function AuthPage() {
   };
 
   const handleOAuthLogin = async (provider: "google" | "github") => {
+    // ... (sin cambios)
     setLoading(true);
     setError(null);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: provider,
-      options: {
-        // Puedes redirigir a una página específica después del login si lo necesitas
-        // redirectTo: window.location.origin + '/dashboard',
-      },
     });
     if (oauthError) {
       setError(oauthError.message);
       setLoading(false);
     }
-    // Si tiene éxito, Supabase redirige a la página del proveedor y luego de vuelta
+  };
+
+  // Función para alternar la visibilidad de la contraseña
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -171,7 +191,10 @@ export function AuthPage() {
             {/* Selector de Pestañas */}
             <div className="flex justify-center mb-6">
               <button
-                onClick={() => setTab("signup")}
+                onClick={() => {
+                  setTab("signup");
+                  setShowPassword(false);
+                }} // Resetear al cambiar
                 className={`px-4 py-2 rounded-l-md focus:outline-none transition-colors duration-300 ${
                   tab === "signup"
                     ? "bg-blue-600 text-white"
@@ -181,7 +204,10 @@ export function AuthPage() {
                 Registrarse
               </button>
               <button
-                onClick={() => setTab("login")}
+                onClick={() => {
+                  setTab("login");
+                  setShowPassword(false);
+                }} // Resetear al cambiar
                 className={`px-4 py-2 rounded-r-md focus:outline-none transition-colors duration-300 ${
                   tab === "login"
                     ? "bg-blue-600 text-white"
@@ -207,22 +233,9 @@ export function AuthPage() {
             {/* Formulario de Registro */}
             {tab === "signup" && (
               <form onSubmit={handleAuth} className="space-y-4">
-                {/* NUEVO CAMPO DE USUARIO */}
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400">
-                    <UserIcon />
-                  </span>
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 placeholder-zinc-400"
-                    placeholder="Nombre de usuario"
-                  />
-                </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400">
+                  {/* CAMBIO: top-2.5 -> top-3 */}
+                  <span className="absolute left-3 top-3 text-zinc-400">
                     <EmailIcon />
                   </span>
                   <input
@@ -234,18 +247,31 @@ export function AuthPage() {
                     placeholder="Email"
                   />
                 </div>
+                {/* CAMPO CONTRASEÑA CON VISIBILIDAD */}
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400">
+                  {/* CAMBIO: top-2.5 -> top-3 */}
+                  <span className="absolute left-3 top-3 text-zinc-400">
                     <LockIcon />
                   </span>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 placeholder-zinc-400"
+                    className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 pr-10 placeholder-zinc-400"
                     placeholder="Contraseña"
                   />
+                  <button
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    // CAMBIO: top-2.5 -> top-3
+                    className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none"
+                    aria-label={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
+                  >
+                    {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
+                  </button>
                 </div>
                 <button
                   type="submit"
@@ -261,7 +287,8 @@ export function AuthPage() {
             {tab === "login" && (
               <form onSubmit={handleAuth} className="space-y-4">
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400">
+                  {/* CAMBIO: top-2.5 -> top-3 */}
+                  <span className="absolute left-3 top-3 text-zinc-400">
                     <EmailIcon />
                   </span>
                   <input
@@ -273,18 +300,31 @@ export function AuthPage() {
                     placeholder="Email"
                   />
                 </div>
+                {/* CAMPO CONTRASEÑA CON VISIBILIDAD */}
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400">
+                  {/* CAMBIO: top-2.5 -> top-3 */}
+                  <span className="absolute left-3 top-3 text-zinc-400">
                     <LockIcon />
                   </span>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 placeholder-zinc-400"
+                    className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 pr-10 placeholder-zinc-400"
                     placeholder="Contraseña"
                   />
+                  <button
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    // CAMBIO: top-2.5 -> top-3
+                    className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none"
+                    aria-label={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
+                  >
+                    {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
+                  </button>
                 </div>
                 <button
                   type="submit"
@@ -298,6 +338,7 @@ export function AuthPage() {
 
             {/* Separador y Opciones Sociales */}
             <div className="mt-6">
+              {/* ... (sin cambios aquí) ... */}
               <div className="relative mb-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-zinc-600"></div>
@@ -309,7 +350,6 @@ export function AuthPage() {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
-                {/* Botón Google */}
                 <button
                   onClick={() => handleOAuthLogin("google")}
                   disabled={loading}
@@ -317,7 +357,6 @@ export function AuthPage() {
                 >
                   <GoogleIcon /> Google
                 </button>
-                {/* Botón GitHub */}
                 <button
                   onClick={() => handleOAuthLogin("github")}
                   disabled={loading}

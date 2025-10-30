@@ -21,7 +21,7 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
   } = useSortable({
     id: id,
     data: {
-      type: "Card", // <-- MODIFICACIÓN: Se añade el tipo
+      type: "Card",
       columnId: columnId,
     },
   });
@@ -31,7 +31,7 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
       : undefined,
-    opacity: isDragging ? 0 : 1, // La tarjeta original se oculta al arrastrar
+    opacity: isDragging ? 0 : 1,
   };
 
   return (
@@ -39,16 +39,20 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
+      // 👇 AHORA: Los listeners se aplican al contenedor principal
+      {...listeners}
       onClick={onClick}
-      className="group bg-zinc-800 p-3 rounded-md border-2 border-zinc-700 shadow-sm flex justify-between items-center"
+      // 👇 AHORA: La clase 'cursor-grab' y 'flex' están aquí
+      className="group bg-zinc-800 p-3 rounded-md border-2 border-zinc-700 shadow-sm flex justify-between items-center cursor-grab"
     >
-      <div {...listeners} className="flex-grow cursor-grab">
-        <p className="text-sm font-medium text-zinc-100 break-all">{title}</p>{" "}
+      {/* 👇 ANTES: Los listeners y el cursor estaban en este div */}
+      <div className="flex-grow">
+        <p className="text-sm font-medium text-zinc-100 break-all">{title}</p>
       </div>
       <button
-        className="opacity-0 group-hover:opacity-100 transition-opacity"
+        className="opacity-0 group-hover:opacity-100 transition-opacity z-10" // z-10 para asegurar que esté por encima
         onClick={(e) => {
-          e.stopPropagation();
+          e.stopPropagation(); // Esto es crucial para que el clic no active el arrastre
           deleteCard(id);
         }}
       >

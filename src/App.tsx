@@ -163,32 +163,69 @@ function Board() {
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over) {
-      setActiveCard(null);
-      setOverColumnId(null);
-      return;
-    }
+
+    setActiveCard(null);
+    setOverColumnId(null);
+
+    if (!over) return;
+
     const sourceColumnId = active.data.current?.columnId as string;
-    const destColumnId = over.data.current?.columnId as string;
-    if (sourceColumnId === destColumnId) {
-      const cardId = active.id as string;
+    const cardId = active.id as string;
+
+    // --- LÓGICA DE REORDENAMIENTO (DENTRO DE LA MISMA COLUMNA) ---
+    // Esta parte ya funciona bien, pero la dejamos para claridad.
+    const overIsCard = over.data.current?.type === "Card";
+    const overIsColumn = over.data.current?.type === "Column";
+
+    if (
+      sourceColumnId === (overIsCard ? over.data.current?.columnId : over.id)
+    ) {
       const overId = over.id as string;
+      if (cardId === overId) return; // No hacer nada si se suelta sobre sí misma
+
       const column = columns.find((c) => c.id === sourceColumnId);
       if (!column) return;
+
       const sourceIndex = column.cards.findIndex((c) => c.id === cardId);
       const destIndex = column.cards.findIndex((c) => c.id === overId);
+
       if (sourceIndex !== -1 && destIndex !== -1) {
         reorderCard(sourceColumnId, sourceIndex, destIndex);
       }
-    } else {
-      const cardId = active.id as string;
-      const destIndex = (over.data.current?.index as number) ?? 0;
-      if (sourceColumnId && destColumnId) {
-        moveCard(cardId, sourceColumnId, destColumnId, destIndex);
-      }
+      return;
     }
-    setActiveCard(null);
-    setOverColumnId(null);
+
+    // --- LÓGICA DE MOVIMIENTO (ENTRE COLUMNAS DIFERENTES) ---
+    // 👇 ¡AQUÍ ESTÁ LA NUEVA LÓGICA MEJORADA! 👇
+
+    let destColumnId: string;
+    let destIndex: number;
+
+    // Escenario 1: Se suelta sobre una tarjeta existente en otra columna
+    if (overIsCard) {
+      destColumnId = over.data.current?.columnId as string;
+      const destColumn = columns.find((c) => c.id === destColumnId);
+      if (!destColumn) return;
+
+      // El índice de destino es el de la tarjeta sobre la que soltamos
+      destIndex = destColumn.cards.findIndex((c) => c.id === over.id);
+
+      // Escenario 2: Se suelta en un área vacía de otra columna
+    } else if (overIsColumn) {
+      destColumnId = over.id as string;
+      const destColumn = columns.find((c) => c.id === destColumnId);
+      if (!destColumn) return;
+
+      // El índice de destino es el final de la nueva columna
+      destIndex = destColumn.cards.length;
+    } else {
+      return; // No es un destino válido
+    }
+
+    // Llamamos a moveCard con la información precisa
+    if (sourceColumnId && destColumnId) {
+      moveCard(cardId, sourceColumnId, destColumnId, destIndex);
+    }
   }
 
   return (

@@ -43,6 +43,7 @@ type BoardState = {
     sourceIndex: number,
     destIndex: number
   ) => Promise<void>;
+  deleteColumn: (columnId: string) => Promise<void>;
   // CAMBIO AQUÍ: Añadimos la función interna al tipo para que TS la reconozca
   _updateCardOrders: (
     cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
@@ -168,6 +169,32 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (error) {
       console.error("Error al borrar tarjeta:", error);
     }
+  },
+
+  deleteColumn: async (columnId) => {
+    // Por seguridad, primero borramos las tarjetas de esa columna.
+    // Si tienes 'ON DELETE CASCADE' en tu base de datos, este paso no es estrictamente necesario,
+    // pero hacerlo así es más explícito y seguro.
+    const { error: cardsError } = await supabase
+      .from("cards")
+      .delete()
+      .eq("column_id", parseInt(columnId));
+    
+    if (cardsError) {
+      console.error("Error al borrar las tarjetas de la columna:", cardsError);
+      return;
+    }
+
+    // Ahora borramos la columna
+    const { error: columnError } = await supabase
+      .from("columns")
+      .delete()
+      .eq("id", parseInt(columnId));
+
+    if (columnError) {
+      console.error("Error al borrar la columna:", columnError);
+    }
+    // No actualizamos el estado local, el oyente de Realtime se encargará.
   },
 
   // ########## LÓGICA DE MOVIMIENTO ACTUALIZADA ##########

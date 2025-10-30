@@ -16,7 +16,8 @@ import { AddColumnForm } from "./components/AddColumnForm";
 import { useBoardStore, type Card as CardType } from "./store";
 import { TaskModal } from "./components/TaskModal";
 import { Card } from "./components/Card";
-import { AuthPage } from "./components/AuthPage"; // 👈 1. Importa la página de autenticación
+import { AuthPage } from "./components/AuthPage";
+import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import type { Session } from "@supabase/supabase-js";
 
 function App() {
@@ -61,6 +62,12 @@ function Board() {
     (CardType & { columnId: string }) | null
   >(null);
   const [overColumnId, setOverColumnId] = useState<string | null>(null);
+  const deleteColumn = useBoardStore((state) => state.deleteColumn);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [columnToDelete, setColumnToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchBoard();
@@ -137,6 +144,23 @@ function Board() {
     }
   };
 
+  const handleOpenDeleteModal = (columnId: string, columnTitle: string) => {
+    setColumnToDelete({ id: columnId, title: columnTitle });
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setColumnToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (columnToDelete) {
+      await deleteColumn(columnToDelete.id);
+      handleCloseDeleteModal(); // Cierra el modal después de confirmar
+    }
+  };
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) {
@@ -205,6 +229,7 @@ function Board() {
               activeCard={activeCard}
               onCardClick={handleOpenEditModal}
               overColumnId={overColumnId}
+              onDeleteColumn={handleOpenDeleteModal}
             />
           ))}
           <AddColumnForm />
@@ -225,6 +250,12 @@ function Board() {
           task={editingTask}
           initialColumnId={targetColumn}
           columns={columns}
+        />
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={handleCloseDeleteModal}
+          onConfirm={handleConfirmDelete}
+          itemName={columnToDelete?.title || ""}
         />
       </div>
     </DndContext>

@@ -12,6 +12,7 @@ type ColumnProps = {
   title: string;
   cards: CardType[];
   onCardClick: (task: CardType, columnId: string) => void;
+  onDeleteColumn: (columnId: string, columnTitle: string) => void;
   activeCard: (CardType & { columnId: string }) | null;
   overColumnId: string | null;
 };
@@ -22,7 +23,8 @@ export function Column({
   cards,
   activeCard,
   onCardClick,
-  overColumnId, // <-- MODIFICACIÓN: Nueva prop
+  overColumnId,
+  onDeleteColumn,
 }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: id,
@@ -48,9 +50,19 @@ export function Column({
       ref={setNodeRef}
       className={`w-72 rounded-md shadow-md flex-shrink-0 transition-colors duration-200 ${columnBackgroundColor}`}
     >
-      <div className="p-3">
-        <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
-      </div>
+      <div className="group p-3 flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-zinc-100 break-all">
+          {title}
+        </h2>
+        {/* 👇 AÑADIMOS EL BOTÓN DE BORRADO */}
+        <button
+          onClick={() => onDeleteColumn(id, title)}
+          className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-all focus:outline-none"
+          aria-label={`Eliminar columna ${title}`}
+        >
+          ✖️
+        </button>
+      </div>{" "}
       <div className="p-3 space-y-3">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (

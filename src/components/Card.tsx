@@ -43,7 +43,7 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
       className="group bg-zinc-800 p-3 rounded-md border-2 border-zinc-700 shadow-sm flex justify-between items-center"
     >
       <div {...listeners} className="flex-grow cursor-grab">
-        <p className="text-sm font-medium text-zinc-100">{title}</p>
+        <p className="text-sm font-medium text-zinc-100 break-all">{title}</p>{" "}
       </div>
       <button
         className="opacity-0 group-hover:opacity-100 transition-opacity"

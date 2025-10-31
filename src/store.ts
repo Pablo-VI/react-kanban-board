@@ -24,27 +24,14 @@ type BoardState = {
     title: string,
     description?: string
   ) => Promise<void>;
-  // CAMBIO AQUÍ: Eliminado el parámetro 'columnId' que no se usa
   editCard: (
     cardId: string,
     title: string,
     description?: string
   ) => Promise<void>;
-  // CAMBIO AQUÍ: Eliminado el parámetro 'columnId' que no se usa
   deleteCard: (cardId: string) => Promise<void>;
-  moveCard: (
-    cardId: string,
-    sourceColumnId: string,
-    destColumnId: string,
-    destIndex: number
-  ) => Promise<void>;
-  reorderCard: (
-    columnId: string,
-    sourceIndex: number,
-    destIndex: number
-  ) => Promise<void>;
   deleteColumn: (columnId: string) => Promise<void>;
-  // CAMBIO AQUÍ: Añadimos la función interna al tipo para que TS la reconozca
+  setColumns: (newColumns: Column[]) => void; // ✨ ADDED: For optimistic UI updates
   _updateCardOrders: (
     cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
   ) => Promise<void>;
@@ -53,26 +40,28 @@ type BoardState = {
 export const useBoardStore = create<BoardState>((set, get) => ({
   columns: [],
 
+  // ✨ ADDED: Direct state setter for optimistic updates
+  setColumns: (newColumns) => set({ columns: newColumns }),
+
   fetchBoard: async () => {
-    // 1. Obtenemos el usuario actual
+    // ... (this function remains the same)
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      set({ columns: [] }); // Si no hay usuario, el tablero está vacío
+      set({ columns: [] });
       return;
     }
 
-    // 2. Pedimos solo las columnas cuyo user_id coincida con el del usuario
     const { data: columnsData, error } = await supabase
       .from("columns")
       .select("id, title, cards ( id, title, description, card_order )")
-      .eq("user_id", user.id) // 👈 ¡LA CLAVE ESTÁ AQUÍ!
+      .eq("user_id", user.id)
       .order("id", { ascending: true })
       .order("card_order", { foreignTable: "cards", ascending: true });
 
     if (error) {
-      console.error("Error al cargar el tablero:", error);
+      console.error("Error loading board:", error);
       return;
     }
     if (!columnsData) {
@@ -91,202 +80,109 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   addColumn: async (title) => {
-    // 1. Obtenemos el usuario para saber a quién pertenece la nueva columna
+    // ... (this function remains the same)
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      console.error(
-        "Error: Se necesita estar logueado para añadir una columna."
-      );
+      console.error("Error: User must be logged in to add a column.");
       return;
     }
-
-    // 2. Al insertar, incluimos el user_id
     const { error } = await supabase
       .from("columns")
-      .insert({ title: title, user_id: user.id }); // 👈 ¡AÑADIMOS EL DUEÑO!
+      .insert({ title: title, user_id: user.id });
 
     if (error) {
-      console.error("Error al añadir columna:", error);
+      console.error("Error adding column:", error);
     }
   },
 
   addCard: async (columnId, title, description) => {
-    // Checkpoint 2: ¿Llega la llamada hasta el store?
-    console.log("2. Función addCard en el store iniciada.");
-    console.log("   - Recibido Column ID:", columnId);
-
+    // ... (this function remains the same)
     const { columns } = get();
     const targetColumn = columns.find((c) => c.id === columnId);
     if (!targetColumn) {
-      console.error(
-        "ERROR: No se encontró la columna de destino. La operación se detiene."
-      );
+      console.error("Error: Target column not found.");
       return;
     }
-
     const newOrder = targetColumn.cards.length;
-    const cardToInsert = {
+    const { error } = await supabase.from("cards").insert({
       title,
       description,
       column_id: parseInt(columnId),
       card_order: newOrder,
-    };
-
-    // Checkpoint 3: ¿Qué estamos intentando insertar?
-    console.log("3. Intentando insertar en Supabase:", cardToInsert);
-
-    const { error } = await supabase.from("cards").insert(cardToInsert);
-
-    // ¡Checkpoint 4: El log MÁS IMPORTANTE! ¿Qué respondió Supabase?
-    console.log("4. Respuesta de Supabase a la inserción:", { error });
-
+    });
     if (error) {
-      console.error("Error explícito de Supabase al añadir tarjeta:", error);
-      return;
+      console.error("Error adding card:", error);
     }
   },
+
   editCard: async (cardId, title, description) => {
-    // La lógica de actualización de la base de datos es correcta.
+    // ... (this function remains the same)
     const { error } = await supabase
       .from("cards")
       .update({ title, description })
       .eq("id", parseInt(cardId));
-
     if (error) {
-      console.error("Error al editar tarjeta:", error);
+      console.error("Error editing card:", error);
     }
   },
 
   deleteCard: async (cardId) => {
-    // La lógica de borrado de la base de datos es correcta.
+    // ... (this function remains the same)
     const { error } = await supabase
       .from("cards")
       .delete()
       .eq("id", parseInt(cardId));
-
     if (error) {
-      console.error("Error al borrar tarjeta:", error);
+      console.error("Error deleting card:", error);
     }
   },
 
   deleteColumn: async (columnId) => {
-    // Por seguridad, primero borramos las tarjetas de esa columna.
-    // Si tienes 'ON DELETE CASCADE' en tu base de datos, este paso no es estrictamente necesario,
-    // pero hacerlo así es más explícito y seguro.
+    // ... (this function remains the same)
     const { error: cardsError } = await supabase
       .from("cards")
       .delete()
       .eq("column_id", parseInt(columnId));
-    
     if (cardsError) {
-      console.error("Error al borrar las tarjetas de la columna:", cardsError);
+      console.error("Error deleting cards in column:", cardsError);
       return;
     }
-
-    // Ahora borramos la columna
     const { error: columnError } = await supabase
       .from("columns")
       .delete()
       .eq("id", parseInt(columnId));
-
     if (columnError) {
-      console.error("Error al borrar la columna:", columnError);
+      console.error("Error deleting column:", columnError);
     }
-    // No actualizamos el estado local, el oyente de Realtime se encargará.
   },
 
-  // ########## LÓGICA DE MOVIMIENTO ACTUALIZADA ##########
-
-  // Función interna para actualizar el orden de las tarjetas en la BD
   _updateCardOrders: async (
     cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
   ) => {
+    // ... (this function remains the same and is now more important)
     if (cardsToUpdate.length === 0) return;
-
     for (const card of cardsToUpdate) {
+      const updateData: { card_order: number; column_id?: number } = {
+        card_order: card.card_order,
+      };
+      if (card.column_id !== undefined) {
+        updateData.column_id = card.column_id;
+      }
       const { error } = await supabase
         .from("cards")
-        .update({
-          card_order: card.card_order,
-          column_id: card.column_id
-            ? parseInt(String(card.column_id))
-            : undefined,
-        })
+        .update(updateData)
         .eq("id", parseInt(card.id));
 
       if (error) {
-        console.error("Error al actualizar el orden de una tarjeta:", error);
+        console.error("Error updating card order:", error);
+        // We stop on the first error to avoid inconsistent states.
+        // Consider a more robust transaction-based approach for production.
         break;
       }
     }
   },
 
-  reorderCard: async (columnId, sourceIndex, destIndex) => {
-    // 1. Actualización optimista de la UI (la UI se actualiza al instante)
-    const originalColumns = get().columns;
-    const colIndex = originalColumns.findIndex((col) => col.id === columnId);
-    if (colIndex === -1) return;
-    const column = { ...originalColumns[colIndex] };
-    const newCards = [...column.cards];
-    const [movedCard] = newCards.splice(sourceIndex, 1);
-    newCards.splice(destIndex, 0, movedCard);
-    const updatedColumns = [...originalColumns];
-    updatedColumns[colIndex] = { ...column, cards: newCards };
-    set({ columns: updatedColumns });
-
-    // 2. Sincronización con la base de datos
-    const cardsToUpdate = newCards.map((card, index) => ({
-      id: card.id,
-      card_order: index,
-    }));
-    await get()._updateCardOrders(cardsToUpdate);
-  },
-
-  moveCard: async (cardId, sourceColumnId, destColumnId, destIndex) => {
-    // 1. Actualización optimista de la UI
-    const originalColumns = get().columns;
-    const newColumns = [...originalColumns];
-    const sourceColIndex = newColumns.findIndex(
-      (col) => col.id === sourceColumnId
-    );
-    const destColIndex = newColumns.findIndex((col) => col.id === destColumnId);
-    if (sourceColIndex === -1 || destColIndex === -1) return;
-
-    const sourceCol = { ...newColumns[sourceColIndex] };
-    const cardIndex = sourceCol.cards.findIndex((card) => card.id === cardId);
-    if (cardIndex === -1) return;
-
-    const [movedCard] = sourceCol.cards.splice(cardIndex, 1);
-    newColumns[sourceColIndex] = sourceCol;
-
-    const destCol = { ...newColumns[destColIndex] };
-    destCol.cards.splice(destIndex, 0, movedCard);
-    newColumns[destColIndex] = destCol;
-
-    set({ columns: newColumns });
-
-    // 2. Sincronización con la base de datos
-    const sourceCardsToUpdate = newColumns[sourceColIndex].cards.map(
-      (card, index) => ({
-        id: card.id,
-        card_order: index,
-      })
-    );
-
-    const destCardsToUpdate = newColumns[destColIndex].cards.map(
-      (card, index) => ({
-        id: card.id,
-        card_order: index,
-        column_id: parseInt(destColumnId), // Aseguramos que la tarjeta movida tenga la nueva column_id
-      })
-    );
-
-    // Combinamos y actualizamos todo en una sola llamada
-    await get()._updateCardOrders([
-      ...sourceCardsToUpdate,
-      ...destCardsToUpdate,
-    ]);
-  },
+  // ❌ REMOVED `reorderCard` and `moveCard` as their logic is now in the component.
 }));

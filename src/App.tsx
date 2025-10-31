@@ -1,4 +1,5 @@
 // src/App.tsx
+
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import {
@@ -13,7 +14,13 @@ import {
 } from "@dnd-kit/core";
 import { Column } from "./components/Column";
 import { AddColumnForm } from "./components/AddColumnForm";
-import { useBoardStore, type Card as CardType } from "./store";
+import { arrayMove } from "@dnd-kit/sortable";
+// 👇 CORRECCIÓN: Importamos el tipo ColumnType para usarlo en las funciones
+import {
+  useBoardStore,
+  type Card as CardType,
+  type Column as ColumnType,
+} from "./store";
 import { TaskModal } from "./components/TaskModal";
 import { Card } from "./components/Card";
 import { AuthPage } from "./components/AuthPage";
@@ -21,47 +28,45 @@ import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import type { Session } from "@supabase/supabase-js";
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null); // 👈 2. Estado para la sesión
+  // ... (Esta parte no cambia)
+  const [session, setSession] = useState<Session | null>(null);
 
-  // 👇 3. Este useEffect gestiona la sesión del usuario
   useEffect(() => {
-    // Comprueba la sesión activa al cargar la página
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    // Escucha los cambios de autenticación (login, logout)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    // Limpia la suscripción al desmontar el componente
     return () => subscription.unsubscribe();
   }, []);
 
-  // 🤯 ¡La lógica principal! Muestra AuthPage o el tablero.
   if (!session) {
     return <AuthPage />;
   } else {
-    return <Board key={session.user.id} />; // Usamos un componente Board para el tablero
+    return <Board key={session.user.id} />;
   }
 }
 
-// 👇 4. Todo el código de tu tablero ahora vive en este componente
 function Board() {
   const fetchBoard = useBoardStore((state) => state.fetchBoard);
   const columns = useBoardStore((state) => state.columns);
-  const moveCard = useBoardStore((state) => state.moveCard);
-  const reorderCard = useBoardStore((state) => state.reorderCard);
+  const setColumns = useBoardStore((state) => state.setColumns);
+  const _updateCardOrders = useBoardStore((state) => state._updateCardOrders);
+
+  const [originalColumns, setOriginalColumns] = useState(columns);
+
+  // ... (El resto de los useState y useEffects no cambian)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CardType | null>(null);
   const [targetColumn, setTargetColumn] = useState("");
   const [activeCard, setActiveCard] = useState<
     (CardType & { columnId: string }) | null
   >(null);
-  const [overColumnId, setOverColumnId] = useState<string | null>(null);
   const deleteColumn = useBoardStore((state) => state.deleteColumn);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<{
@@ -87,11 +92,14 @@ function Board() {
         () => fetchBoard()
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [fetchBoard]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const handleOpenCreateModal = (columnId: string) => {
     setTargetColumn(columnId);
@@ -109,14 +117,6 @@ function Board() {
     setIsModalOpen(false);
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const columnId = active.data.current?.columnId as string;
@@ -126,24 +126,162 @@ function Board() {
     if (card && columnId) {
       setActiveCard({ ...card, columnId });
     }
+    setOriginalColumns(columns);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
+  // 👇 CORRECCIÓN COMPLETA: Lógica reescrita para evitar el updater y los tipos 'any'
+  function handleDragOver(event: DragOverEvent) {
+    const { active, over } = event;
     if (!over) return;
+
+    const activeId = active.id as string;
     const overId = over.id as string;
+
+    if (activeId === overId) return;
+
+    const isActiveACard = active.data.current?.type === "Card";
+    if (!isActiveACard) return;
+
+    const sourceColumnId = active.data.current?.columnId as string;
     const overIsColumn = over.data.current?.type === "Column";
-    if (overIsColumn) {
-      setOverColumnId(overId);
+    const destColumnId = overIsColumn
+      ? (over.id as string)
+      : (over.data.current?.columnId as string);
+
+    if (sourceColumnId === destColumnId) return;
+
+    // Obtenemos el estado más reciente directamente
+    const currentColumns = useBoardStore.getState().columns;
+    // Creamos una copia profunda para evitar mutaciones no deseadas
+    const newColumns = JSON.parse(
+      JSON.stringify(currentColumns)
+    ) as ColumnType[];
+
+    const sourceColIndex = newColumns.findIndex(
+      (c: ColumnType) => c.id === sourceColumnId
+    );
+    const destColIndex = newColumns.findIndex(
+      (c: ColumnType) => c.id === destColumnId
+    );
+
+    // Verificamos que los índices son válidos
+    if (sourceColIndex === -1 || destColIndex === -1) return;
+
+    const sourceCards = newColumns[sourceColIndex].cards;
+    const destCards = newColumns[destColIndex].cards;
+
+    const activeCardIndex = sourceCards.findIndex((c) => c.id === activeId);
+    if (activeCardIndex === -1) return;
+
+    const [movedCard] = sourceCards.splice(activeCardIndex, 1);
+    destCards.push(movedCard);
+
+    // Actualizamos el estado con el array ya modificado
+    setColumns(newColumns);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveCard(null);
+    const { active, over } = event;
+
+    if (!over) {
+      setColumns(originalColumns);
       return;
     }
-    const overIsCard = over.data.current?.type === "Card";
-    if (overIsCard) {
-      const overColumn = over.data.current?.columnId as string;
-      setOverColumnId(overColumn);
-    }
-  };
 
+    const sourceColumnId = active.data.current?.columnId as string;
+    const overIsColumn = over.data.current?.type === "Column";
+    const destColumnId = overIsColumn
+      ? (over.id as string)
+      : (over.data.current?.columnId as string);
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // 👇 CORRECCIÓN: Añadimos tipos explícitos
+    const sourceCol = columns.find((c: ColumnType) => c.id === sourceColumnId);
+    const destCol = columns.find((c: ColumnType) => c.id === destColumnId);
+
+    if (!sourceCol || !destCol) {
+      setColumns(originalColumns);
+      return;
+    }
+
+    const sourceCardIndex = sourceCol.cards.findIndex((c) => c.id === activeId);
+    let destCardIndex;
+    if (over.data.current?.type === "Card") {
+      destCardIndex = destCol.cards.findIndex((c) => c.id === overId);
+    } else {
+      destCardIndex = destCol.cards.length;
+    }
+
+    // 👇 CORRECCIÓN: Usamos 'const' en lugar de 'let'
+    const newColumns = JSON.parse(JSON.stringify(columns)) as ColumnType[];
+
+    if (sourceColumnId === destColumnId) {
+      const colIndex = newColumns.findIndex(
+        (c: ColumnType) => c.id === sourceColumnId
+      );
+      if (sourceCardIndex !== -1 && destCardIndex !== -1) {
+        const newCards = arrayMove(
+          newColumns[colIndex].cards,
+          sourceCardIndex,
+          destCardIndex
+        );
+        newColumns[colIndex] = { ...newColumns[colIndex], cards: newCards };
+      }
+    } else {
+      const sourceColIndex = newColumns.findIndex(
+        (c: ColumnType) => c.id === sourceColumnId
+      );
+      const destColIndex = newColumns.findIndex(
+        (c: ColumnType) => c.id === destColumnId
+      );
+
+      if (sourceColIndex !== -1 && sourceCardIndex !== -1) {
+        const [movedCard] = newColumns[sourceColIndex].cards.splice(
+          sourceCardIndex,
+          1
+        );
+        newColumns[destColIndex].cards.splice(destCardIndex, 0, movedCard);
+      }
+    }
+
+    setColumns(newColumns);
+
+    const cardsToUpdate: {
+      id: string;
+      card_order: number;
+      column_id: number;
+    }[] = [];
+    const updatedSourceCol = newColumns.find(
+      (c: ColumnType) => c.id === sourceColumnId
+    )!;
+    updatedSourceCol.cards.forEach((card, index) => {
+      cardsToUpdate.push({
+        id: card.id,
+        card_order: index,
+        column_id: parseInt(sourceColumnId),
+      });
+    });
+
+    if (sourceColumnId !== destColumnId) {
+      const updatedDestCol = newColumns.find(
+        (c: ColumnType) => c.id === destColumnId
+      )!;
+      updatedDestCol.cards.forEach((card, index) => {
+        if (!cardsToUpdate.some((c) => c.id === card.id)) {
+          cardsToUpdate.push({
+            id: card.id,
+            card_order: index,
+            column_id: parseInt(destColumnId),
+          });
+        }
+      });
+    }
+    _updateCardOrders(cardsToUpdate);
+  }
+
+  // ... (El resto del componente Board no cambia)
   const handleOpenDeleteModal = (columnId: string, columnTitle: string) => {
     setColumnToDelete({ id: columnId, title: columnTitle });
     setIsDeleteModalOpen(true);
@@ -157,76 +295,9 @@ function Board() {
   const handleConfirmDelete = async () => {
     if (columnToDelete) {
       await deleteColumn(columnToDelete.id);
-      handleCloseDeleteModal(); // Cierra el modal después de confirmar
+      handleCloseDeleteModal();
     }
   };
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-
-    setActiveCard(null);
-    setOverColumnId(null);
-
-    if (!over) return;
-
-    const sourceColumnId = active.data.current?.columnId as string;
-    const cardId = active.id as string;
-
-    // --- LÓGICA DE REORDENAMIENTO (DENTRO DE LA MISMA COLUMNA) ---
-    // Esta parte ya funciona bien, pero la dejamos para claridad.
-    const overIsCard = over.data.current?.type === "Card";
-    const overIsColumn = over.data.current?.type === "Column";
-
-    if (
-      sourceColumnId === (overIsCard ? over.data.current?.columnId : over.id)
-    ) {
-      const overId = over.id as string;
-      if (cardId === overId) return; // No hacer nada si se suelta sobre sí misma
-
-      const column = columns.find((c) => c.id === sourceColumnId);
-      if (!column) return;
-
-      const sourceIndex = column.cards.findIndex((c) => c.id === cardId);
-      const destIndex = column.cards.findIndex((c) => c.id === overId);
-
-      if (sourceIndex !== -1 && destIndex !== -1) {
-        reorderCard(sourceColumnId, sourceIndex, destIndex);
-      }
-      return;
-    }
-
-    // --- LÓGICA DE MOVIMIENTO (ENTRE COLUMNAS DIFERENTES) ---
-    // 👇 ¡AQUÍ ESTÁ LA NUEVA LÓGICA MEJORADA! 👇
-
-    let destColumnId: string;
-    let destIndex: number;
-
-    // Escenario 1: Se suelta sobre una tarjeta existente en otra columna
-    if (overIsCard) {
-      destColumnId = over.data.current?.columnId as string;
-      const destColumn = columns.find((c) => c.id === destColumnId);
-      if (!destColumn) return;
-
-      // El índice de destino es el de la tarjeta sobre la que soltamos
-      destIndex = destColumn.cards.findIndex((c) => c.id === over.id);
-
-      // Escenario 2: Se suelta en un área vacía de otra columna
-    } else if (overIsColumn) {
-      destColumnId = over.id as string;
-      const destColumn = columns.find((c) => c.id === destColumnId);
-      if (!destColumn) return;
-
-      // El índice de destino es el final de la nueva columna
-      destIndex = destColumn.cards.length;
-    } else {
-      return; // No es un destino válido
-    }
-
-    // Llamamos a moveCard con la información precisa
-    if (sourceColumnId && destColumnId) {
-      moveCard(cardId, sourceColumnId, destColumnId, destIndex);
-    }
-  }
 
   return (
     <DndContext
@@ -238,7 +309,6 @@ function Board() {
       <div className="bg-zinc-950 text-white min-h-screen p-8 overflow-x-auto">
         <header className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Kanba</h1>
-          {/* 👇 5. Contenedor para los botones de la cabecera */}
           <div className="flex items-center gap-4">
             {columns.length > 0 && (
               <button
@@ -265,7 +335,7 @@ function Board() {
               cards={column.cards}
               activeCard={activeCard}
               onCardClick={handleOpenEditModal}
-              overColumnId={overColumnId}
+              overColumnId={null}
               onDeleteColumn={handleOpenDeleteModal}
             />
           ))}

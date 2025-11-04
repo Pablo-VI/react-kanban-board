@@ -6,6 +6,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { Card as CardType } from "../store";
 import { Card } from "./Card";
+import { AddCardForm } from "./AddCardForm"; // <-- IMPORTAR
 
 type ColumnProps = {
   id: string;
@@ -14,7 +15,7 @@ type ColumnProps = {
   onCardClick: (task: CardType, columnId: string) => void;
   onDeleteColumn: (columnId: string, columnTitle: string) => void;
   activeCard: (CardType & { columnId: string }) | null;
-  overColumnId: string | null; // Aunque no lo usemos para el placeholder, es bueno mantenerlo por si se necesita para otros efectos
+  overColumnId: string | null;
 };
 
 export function Column({
@@ -39,28 +40,45 @@ export function Column({
     isOver || overColumnId === id ? "bg-zinc-800/60" : "bg-zinc-900/50";
 
   return (
-    // 👇 MODIFICACIÓN: El contenedor principal ahora tiene una altura mínima
-    // para asegurar que siempre haya un área donde soltar, incluso si está vacío.
     <div
       ref={setNodeRef}
-      className={`w-72 rounded-md shadow-md flex flex-col flex-shrink-0 transition-colors duration-200 ${columnBackgroundColor} min-h-[150px]`}
+      // 👇 MODIFICACIÓN: Añadimos un max-h y dejamos que flex-col gestione el layout
+      className={`w-72 rounded-md shadow-md flex flex-col flex-shrink-0 transition-colors duration-200 ${columnBackgroundColor} max-h-[90vh]`}
     >
-      <div className="group p-3 flex justify-between items-center">
+      {/* 1. Encabezado de la Columna (no cambia) */}
+      <div className="group p-3 flex justify-between items-center flex-shrink-0">
         <h2 className="text-lg font-semibold text-zinc-100 break-all">
           {title}
         </h2>
         <button
           onClick={() => onDeleteColumn(id, title)}
-          className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-all focus:outline-none"
+          className="opacity-0 group-hover:opacity-100 
+                     text-gray-400                
+                     hover:text-red-500           
+                     active:text-red-700          
+                     transition-all duration-150 focus:outline-none cursor-pointer
+                     p-1"
           aria-label={`Eliminar columna ${title}`}
         >
-          ✖️
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
         </button>
       </div>
 
-      {/* 👇 MODIFICACIÓN CLAVE: Hemos eliminado el div intermedio.
-          Ahora el SortableContext está directamente dentro del área droppable. */}
-      <div className="p-3 pt-0 space-y-3">
+      {/* 2. Lista de Tarjetas (ahora con scroll y flex-grow) */}
+      <div className="p-3 pt-0 pb-0 space-y-3 overflow-y-auto flex-grow">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
             <Card
@@ -72,6 +90,11 @@ export function Column({
             />
           ))}
         </SortableContext>
+      </div>
+
+      {/* 3. Formulario de Añadir Tarjeta (en el pie) */}
+      <div className="p-3 pt-2 flex-shrink-0">
+        <AddCardForm columnId={id} />
       </div>
     </div>
   );

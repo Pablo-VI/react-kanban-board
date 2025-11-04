@@ -63,7 +63,6 @@ function Board() {
   // ... (El resto de los useState y useEffects no cambian)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CardType | null>(null);
-  const [targetColumn, setTargetColumn] = useState("");
   const [activeCard, setActiveCard] = useState<
     (CardType & { columnId: string }) | null
   >(null);
@@ -101,14 +100,7 @@ function Board() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const handleOpenCreateModal = (columnId: string) => {
-    setTargetColumn(columnId);
-    setEditingTask(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (task: CardType, columnId: string) => {
-    setTargetColumn(columnId);
+  const handleOpenEditModal = (task: CardType) => {
     setEditingTask(task);
     setIsModalOpen(true);
   };
@@ -310,14 +302,6 @@ function Board() {
         <header className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Kanba</h1>
           <div className="flex items-center gap-4">
-            {columns.length > 0 && (
-              <button
-                onClick={() => handleOpenCreateModal(columns[0].id)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-              >
-                Añadir Tarea
-              </button>
-            )}
             <button
               onClick={() => supabase.auth.signOut()}
               className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
@@ -326,7 +310,7 @@ function Board() {
             </button>
           </div>
         </header>
-        <main className="flex gap-6">
+        <main className="flex gap-6 items-start">
           {columns.map((column) => (
             <Column
               key={column.id}
@@ -355,8 +339,6 @@ function Board() {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           task={editingTask}
-          initialColumnId={targetColumn}
-          columns={columns}
         />
         <DeleteConfirmationModal
           isOpen={isDeleteModalOpen}

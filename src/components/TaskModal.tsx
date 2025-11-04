@@ -1,101 +1,95 @@
 // src/components/TaskModal.tsx
-import { useEffect, useState, useRef } from "react";
-import { useBoardStore, type Card, type Column } from "../store";
+import { useEffect, useState, useRef, type KeyboardEvent } from "react"; // Añadido KeyboardEvent
+import { useBoardStore, type Card } from "../store"; // ❌ ELIMINADO: type Column
 
 type TaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
   task: Card | null;
-  initialColumnId: string;
-  columns: Column[];
+  // ❌ ELIMINADAS: initialColumnId y columns
 };
 
-export function TaskModal({
-  isOpen,
-  onClose,
-  task,
-  initialColumnId,
-  columns,
-}: TaskModalProps) {
-  const { addCard, editCard } = useBoardStore();
+export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
+  const { editCard } = useBoardStore(); // ❌ ELIMINADO: addCard
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedColumnId, setSelectedColumnId] = useState(initialColumnId);
+  // ❌ ELIMINADO: selectedColumnId
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // 1. Efecto para abrir/cerrar el modal (se mantiene igual)
+  // ... (Efectos para showModal y backdrop click se mantienen) ...
   useEffect(() => {
     if (isOpen) {
-      // El showModal() es necesario para el backdrop nativo
       dialogRef.current?.showModal();
     } else {
       dialogRef.current?.close();
     }
   }, [isOpen]);
 
-  // 2. EFECTO CORREGIDO: Cierre al hacer clic en el backdrop
   useEffect(() => {
     const dialogElement = dialogRef.current;
-
-    // Esta función maneja el clic en cualquier parte de la ventana
     const handleMouseDown = (event: MouseEvent) => {
-      // Solo nos interesa el clic si el modal está abierto
-      if (!dialogElement || !isOpen) return;
-
-      // Usamos el `target` para verificar el elemento clicado.
-      // Si el elemento clicado es el propio <dialog> (el área oscura), lo cerramos.
-      // Si el clic es dentro del contenido, no lo cerramos.
       if (event.target === dialogElement) {
         onClose();
       }
     };
-
-    // Usamos 'mousedown' en el elemento del diálogo
     if (dialogElement) {
       dialogElement.addEventListener("mousedown", handleMouseDown);
     }
-
-    // Limpieza: quitamos el oyente al desmontar o cerrar
     return () => {
       if (dialogElement) {
         dialogElement.removeEventListener("mousedown", handleMouseDown);
       }
     };
-    // Reajustamos las dependencias
   }, [isOpen, onClose]);
 
-  // 3. Efecto para rellenar/resetear el formulario (se mantiene igual)
+  // 👇 MODIFICACIÓN: Simplificado, solo se rellena si hay tarea
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
-    } else {
-      setTitle("");
-      setDescription("");
-      setSelectedColumnId(initialColumnId);
+      // Auto-focus al input
+      setTimeout(() => {
+        dialogRef.current?.querySelector("input")?.focus();
+      }, 10);
     }
-  }, [task, isOpen, initialColumnId]);
+    // ❌ ELIMINADO: else (para crear)
+  }, [task, isOpen]);
 
+  // 👇 MODIFICACIÓN: Simplificado, solo edita
   const handleSave = () => {
+    if (!task) return; // Guarda de seguridad
     if (title.trim() === "") return;
-    if (task) {
-      editCard(task.id, title, description);
-    } else {
-      addCard(selectedColumnId, title, description);
-    }
+
+    editCard(task.id, title, description);
     onClose();
   };
+
+  // Manejador de teclado
+  const handleKeyDown = (e: KeyboardEvent<HTMLDialogElement>) => {
+    if (e.key === "Enter") {
+      if ((e.target as HTMLElement).tagName.toLowerCase() === "textarea") {
+        return;
+      }
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
+  // Guarda de seguridad por si 'task' es null
+  if (!task) {
+    return null;
+  }
 
   return (
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      onKeyDown={handleKeyDown} // Añadido
       className="bg-transparent overflow-visible rounded-none"
     >
       <div className="p-6 bg-zinc-800 rounded-lg shadow-xl w-full max-w-md text-white">
-        <h2 className="text-2xl font-bold mb-4">
-          {task ? "Editar Tarea" : "Crear Nueva Tarea"}
-        </h2>
+        {/* 👇 MODIFICACIÓN: Título fijo */}
+        <h2 className="text-2xl font-bold mb-4">Editar Tarea</h2>
         <div className="flex flex-col gap-4">
           <input
             type="text"
@@ -103,6 +97,7 @@ export function TaskModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Título"
             className="bg-zinc-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            maxLength={100}
           />
           <textarea
             value={description}
@@ -112,29 +107,7 @@ export function TaskModal({
             className="bg-zinc-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           ></textarea>
 
-          {/* Selector de columna */}
-          {!task && (
-            <div>
-              <label
-                htmlFor="column-select"
-                className="block text-sm font-medium text-zinc-400 mb-1"
-              >
-                Columna
-              </label>
-              <select
-                id="column-select"
-                value={selectedColumnId}
-                onChange={(e) => setSelectedColumnId(e.target.value)}
-                className="bg-zinc-700 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {columns.map((col) => (
-                  <option key={col.id} value={col.id}>
-                    {col.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* ❌ ELIMINADO: Selector de columna */}
         </div>
         <div className="mt-6 flex justify-end gap-4">
           <button

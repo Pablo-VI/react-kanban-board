@@ -1,5 +1,6 @@
 // src/components/Card.tsx
 import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useBoardStore } from "../store";
 
 type CardProps = {
@@ -11,6 +12,7 @@ type CardProps = {
 
 export function Card({ id, title, columnId, onClick }: CardProps) {
   const deleteCard = useBoardStore((state) => state.deleteCard);
+
   const {
     attributes,
     listeners,
@@ -22,42 +24,69 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
     id: id,
     data: {
       type: "Card",
+      cardId: id,
       columnId: columnId,
     },
   });
 
   const style = {
+    transform: CSS.Transform.toString(transform),
     transition,
-    transform: transform
-      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-      : undefined,
-    opacity: isDragging ? 0 : 1,
   };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteCard(id);
+  };
+
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="bg-zinc-700 p-3 rounded-md shadow-md opacity-50 border-2 border-blue-500 cursor-grab relative h-[60px]"
+      />
+    );
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      // 👇 AHORA: Los listeners se aplican al contenedor principal
       {...listeners}
       onClick={onClick}
-      // 👇 AHORA: La clase 'cursor-grab' y 'flex' están aquí
-      className="group bg-zinc-800 p-3 rounded-md border-2 border-zinc-700 shadow-sm flex justify-between items-center cursor-grab"
+      className="bg-zinc-700 p-3 rounded-md shadow-md flex items-center justify-between cursor-grab relative group"
     >
-      {/* 👇 ANTES: Los listeners y el cursor estaban en este div */}
-      <div className="flex-grow">
-        <p className="text-sm font-medium text-zinc-100 break-all">{title}</p>
-      </div>
+      <p className="text-white text-sm break-all pr-8">{title}</p>
+
+      {/* 👇 MODIFICACIÓN: Ajustamos el tamaño del SVG y los paddings del botón */}
       <button
-        className="opacity-0 group-hover:opacity-100 transition-opacity z-10" // z-10 para asegurar que esté por encima
-        onClick={(e) => {
-          e.stopPropagation(); // Esto es crucial para que el clic no active el arrastre
-          deleteCard(id);
-        }}
+        onClick={handleDelete}
+        className="absolute right-1.5 w-6 h-6 rounded-full text-zinc-400 opacity-0 group-hover:opacity-100 
+                   hover:bg-red-500 hover:text-white 
+                   active:bg-red-700 active:text-white 
+                   transition-all duration-150 focus:outline-none
+                   flex items-center justify-center
+                   cursor-pointer" 
+        aria-label="Eliminar tarea"
       >
-        🗑️
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2.5}
+          stroke="currentColor"
+          className="w-4 h-4" // <-- El SVG mantiene su tamaño, ahora el botón se ajusta a él
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
       </button>
+      {/* 👆 FIN MODIFICACIÓN */}
     </div>
   );
 }

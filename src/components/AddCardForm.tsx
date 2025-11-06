@@ -72,7 +72,7 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="w-full text-left p-2.5 text-zinc-400 hover:text-white hover:bg-zinc-700/70 rounded-md transition-colors"
+        className="w-full text-left p-2.5 mb-3 text-zinc-400 hover:text-white hover:bg-zinc-700/70 rounded-md transition-colors"
       >
         + Añade una tarjeta
       </button>

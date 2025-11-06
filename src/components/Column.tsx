@@ -42,10 +42,8 @@ export function Column({
   return (
     <div
       ref={setNodeRef}
-      // 👇 MODIFICACIÓN: Añadimos un max-h y dejamos que flex-col gestione el layout
-      className={`w-72 rounded-md shadow-md flex flex-col flex-shrink-0 transition-colors duration-200 ${columnBackgroundColor} max-h-[90vh]`}
+      className={`w-72 rounded-md shadow-md flex flex-col flex-shrink-0 transition-colors duration-200 ${columnBackgroundColor} max-h-[80vh]`}
     >
-      {/* 1. Encabezado de la Columna (no cambia) */}
       <div className="group p-3 flex justify-between items-center flex-shrink-0">
         <h2 className="text-lg font-semibold text-zinc-100 break-all">
           {title}
@@ -77,8 +75,7 @@ export function Column({
         </button>
       </div>
 
-      {/* 2. Lista de Tarjetas (ahora con scroll y flex-grow) */}
-      <div className="p-3 pt-0 pb-0 space-y-3 overflow-y-auto flex-grow">
+      <div className="p-3 pt-0 pb-0 space-y-3 overflow-y-auto flex-grow hide-scrollbar">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
             <Card
@@ -90,12 +87,10 @@ export function Column({
             />
           ))}
         </SortableContext>
-      </div>
-
-      {/* 3. Formulario de Añadir Tarjeta (en el pie) */}
-      <div className="p-3 pt-2 flex-shrink-0">
-        <AddCardForm columnId={id} />
-      </div>
+{/*         <div className="p-3 pt-2 flex-shrink-0">
+ */}          <AddCardForm columnId={id} />
+{/*         </div>
+ */}      </div>
     </div>
   );
 }

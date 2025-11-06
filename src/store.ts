@@ -1,6 +1,7 @@
 // src/store.ts
 import { create } from "zustand";
 import { supabase } from "./supabase";
+import { toast } from "react-hot-toast";
 
 export type Card = {
   id: string;
@@ -18,12 +19,12 @@ export type Column = {
 type BoardState = {
   columns: Column[];
   fetchBoard: () => Promise<void>;
-  addColumn: (title: string) => Promise<void>;
+  addColumn: (title: string) => Promise<boolean>;
   addCard: (
     columnId: string,
     title: string,
     description?: string
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   editCard: (
     cardId: string,
     title: string,
@@ -40,7 +41,6 @@ type BoardState = {
 export const useBoardStore = create<BoardState>((set, get) => ({
   columns: [],
 
-  // ✨ ADDED: Direct state setter for optimistic updates
   setColumns: (newColumns) => set({ columns: newColumns }),
 
   fetchBoard: async () => {
@@ -61,7 +61,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       .order("card_order", { foreignTable: "cards", ascending: true });
 
     if (error) {
-      console.error("Error loading board:", error);
+      toast.error("Error al cargar el tablero: " + error.message);
       return;
     }
     if (!columnsData) {
@@ -80,30 +80,32 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   addColumn: async (title) => {
-    // ... (this function remains the same)
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      console.error("Error: User must be logged in to add a column.");
-      return;
+      toast.error("Debes iniciar sesión para añadir una columna.");
+      return false;
     }
     const { error } = await supabase
       .from("columns")
       .insert({ title: title, user_id: user.id });
 
     if (error) {
-      console.error("Error adding column:", error);
+      toast.error("Error al crear la columna: " + error.message);
+      return false;
     }
+
+    toast.success("Columna creada");
+    return true;
   },
 
   addCard: async (columnId, title, description) => {
-    // ... (this function remains the same)
     const { columns } = get();
     const targetColumn = columns.find((c) => c.id === columnId);
     if (!targetColumn) {
-      console.error("Error: Target column not found.");
-      return;
+      toast.error("Error: Columna de destino no encontrada.");
+      return false;
     }
     const newOrder = targetColumn.cards.length;
     const { error } = await supabase.from("cards").insert({
@@ -113,40 +115,44 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       card_order: newOrder,
     });
     if (error) {
-      console.error("Error adding card:", error);
+      toast.error("Error al crear la tarjeta: " + error.message);
+      return false;
     }
+    toast.success("Tarjeta creada");
+    return true;
   },
 
   editCard: async (cardId, title, description) => {
-    // ... (this function remains the same)
     const { error } = await supabase
       .from("cards")
       .update({ title, description })
       .eq("id", parseInt(cardId));
     if (error) {
-      console.error("Error editing card:", error);
+      toast.error("Error al guardar la tarjeta: " + error.message);
+    } else {
+      toast.success("Tarjeta guardada");
     }
   },
 
   deleteCard: async (cardId) => {
-    // ... (this function remains the same)
     const { error } = await supabase
       .from("cards")
       .delete()
       .eq("id", parseInt(cardId));
     if (error) {
-      console.error("Error deleting card:", error);
+      toast.error("Error al eliminar la tarjeta: " + error.message);
+    } else {
+      toast.success("Tarjeta eliminada");
     }
   },
 
   deleteColumn: async (columnId) => {
-    // ... (this function remains the same)
     const { error: cardsError } = await supabase
       .from("cards")
       .delete()
       .eq("column_id", parseInt(columnId));
     if (cardsError) {
-      console.error("Error deleting cards in column:", cardsError);
+      toast.error("Error al eliminar las tarjetas: " + cardsError.message);
       return;
     }
     const { error: columnError } = await supabase
@@ -154,7 +160,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       .delete()
       .eq("id", parseInt(columnId));
     if (columnError) {
-      console.error("Error deleting column:", columnError);
+      toast.error("Error al eliminar la columna: " + columnError.message);
+    } else {
+      toast.success("Columna eliminada");
     }
   },
 
@@ -177,12 +185,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
       if (error) {
         console.error("Error updating card order:", error);
-        // We stop on the first error to avoid inconsistent states.
-        // Consider a more robust transaction-based approach for production.
+        toast.error("Error al sincronizar el orden.");
         break;
       }
     }
   },
 
-  // ❌ REMOVED `reorderCard` and `moveCard` as their logic is now in the component.
 }));

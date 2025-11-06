@@ -1,8 +1,10 @@
+// src/components/AuthPage.tsx
 import React, { useState } from "react";
 import { supabase } from "../supabase";
+import { toast, Toaster } from "react-hot-toast";
 
-// --- Iconos SVG ---
-// (EmailIcon, LockIcon, GoogleIcon, GitHubIcon se mantienen igual que antes)
+// --- Iconos SVG (no cambian) ---
+// ... (EmailIcon, LockIcon, etc. están aquí)
 const EmailIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -73,7 +75,6 @@ const GitHubIcon = () => (
   </svg>
 );
 
-// NUEVOS ICONOS para mostrar/ocultar contraseña
 const EyeOpenIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -114,22 +115,73 @@ const EyeClosedIcon = () => (
 );
 // --- Fin Iconos SVG ---
 
+// --- Función de Traducción (no cambia) ---
+function translateAuthError(message: string): string {
+  // ... (versión completa de la función)
+  if (message.includes("Invalid login credentials")) {
+    return "Credenciales inválidas. Revisa tu email y contraseña.";
+  }
+  if (message.includes("Email not confirmed")) {
+    return "Email no confirmado. Por favor, revisa tu bandeja de entrada.";
+  }
+  if (message.includes("User already registered")) {
+    return "Este email ya está registrado. Intenta iniciar sesión.";
+  }
+  if (message.includes("Unable to validate email address: invalid format")) {
+    return "El formato del email no es válido.";
+  }
+  if (message.includes("Signup requires a valid password")) {
+    return "La contraseña no puede estar vacía.";
+  }
+  if (
+    message.includes("Password should contain at least one character of each")
+  ) {
+    return "La contraseña no es segura. Debe contener al menos: una minúscula, una mayúscula, un número y un símbolo (ej. !@#$%).";
+  }
+  if (message.includes("Password should be at least 8 characters")) {
+    return "La contraseña debe tener al menos 8 caracteres.";
+  }
+  if (message.includes("Email rate limit exceeded")) {
+    return "Has superado el límite de intentos. Por favor, espera un momento.";
+  }
+  if (message.includes("Too many requests")) {
+    return "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde.";
+  }
+  if (message.includes("OAuth state cookie not found")) {
+    return "Error de autenticación (cookie no encontrada). Por favor, inténtalo de nuevo.";
+  }
+  if (message.includes("Error getting user from external provider")) {
+    return "No se pudo obtener la información de tu proveedor (Google, GitHub, etc.).";
+  }
+  if (message.includes("NetworkError when attempting to fetch resource")) {
+    return "Error de red. No se pudo conectar con el servidor.";
+  }
+  console.error("Error de Supabase no traducido:", message);
+  return "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.";
+}
+
+// 👇 --- NUEVA CONSTANTE DE REGEX ---
+// Esta regex comprueba una estructura básica + un TLD (ej. .com)
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 export function AuthPage() {
-  // CAMBIO: Pestaña por defecto ahora es 'login'
   const [tab, setTab] = useState<"signup" | "login">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  // NUEVO ESTADO para controlar la visibilidad de la contraseña
   const [showPassword, setShowPassword] = useState(false);
 
   const handleAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!EMAIL_REGEX.test(email)) {
+      toast.error(
+        "El formato del email no es válido (ej. usuario@dominio.com)"
+      );
+      return;
+    }
+
     setLoading(true);
-    setError(null);
-    setMessage(null);
 
     try {
       if (tab === "signup") {
@@ -138,9 +190,11 @@ export function AuthPage() {
           password,
         });
         if (signUpError) throw signUpError;
-        setMessage("¡Registro exitoso! Ya puedes iniciar sesión.");
+        toast.success(
+          "¡Registro exitoso! Revisa tu email para confirmar tu cuenta."
+        );
         setTab("login");
-        setShowPassword(false); // Resetear visibilidad al cambiar de formulario
+        setShowPassword(false);
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -150,9 +204,10 @@ export function AuthPage() {
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        const friendlyMessage = translateAuthError(err.message);
+        toast.error(friendlyMessage);
       } else {
-        setError("Ocurrió un error inesperado");
+        toast.error("Ocurrió un error inesperado");
       }
     } finally {
       setLoading(false);
@@ -160,41 +215,48 @@ export function AuthPage() {
   };
 
   const handleOAuthLogin = async (provider: "google" | "github") => {
-    // ... (sin cambios)
     setLoading(true);
-    setError(null);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: provider,
     });
     if (oauthError) {
-      setError(oauthError.message);
+      const friendlyMessage = translateAuthError(oauthError.message);
+      toast.error(friendlyMessage);
       setLoading(false);
     }
   };
 
-  // Función para alternar la visibilidad de la contraseña
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
   return (
     <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-black min-h-screen flex items-center justify-center font-sans">
+      <Toaster
+        position="bottom-right"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: "#333",
+            color: "#fff",
+          },
+        }}
+      />
       <div className="container mx-auto px-4">
         <div className="max-w-md mx-auto bg-zinc-800 rounded-lg overflow-hidden shadow-2xl border border-zinc-700">
-          {/* Cabecera */}
           <div className="text-center py-6 bg-gradient-to-r from-blue-700 to-purple-800 text-white">
             <h1 className="text-3xl font-bold">¡Bienvenido!</h1>
             <p className="mt-2 text-zinc-300">Únete a tu espacio de trabajo</p>
           </div>
 
           <div className="p-8">
-            {/* Selector de Pestañas */}
+            {/* ... (Selector de Pestañas no cambia) ... */}
             <div className="flex justify-center mb-6">
               <button
                 onClick={() => {
                   setTab("signup");
                   setShowPassword(false);
-                }} // Resetear al cambiar
+                }}
                 className={`px-4 py-2 rounded-l-md focus:outline-none transition-colors duration-300 ${
                   tab === "signup"
                     ? "bg-blue-600 text-white"
@@ -207,7 +269,7 @@ export function AuthPage() {
                 onClick={() => {
                   setTab("login");
                   setShowPassword(false);
-                }} // Resetear al cambiar
+                }}
                 className={`px-4 py-2 rounded-r-md focus:outline-none transition-colors duration-300 ${
                   tab === "login"
                     ? "bg-blue-600 text-white"
@@ -218,23 +280,11 @@ export function AuthPage() {
               </button>
             </div>
 
-            {/* Mensajes de Estado */}
-            {message && (
-              <div className="mb-4 p-3 bg-green-700 text-white rounded text-center">
-                {message}
-              </div>
-            )}
-            {error && (
-              <div className="mb-4 p-3 bg-red-700 text-white rounded text-center">
-                {error}
-              </div>
-            )}
-
             {/* Formulario de Registro */}
             {tab === "signup" && (
-              <form onSubmit={handleAuth} className="space-y-4">
+              // 👇 --- AÑADIDO noValidate ---
+              <form onSubmit={handleAuth} className="space-y-4" noValidate>
                 <div className="relative">
-                  {/* CAMBIO: top-2.5 -> top-3 */}
                   <span className="absolute left-3 top-3 text-zinc-400">
                     <EmailIcon />
                   </span>
@@ -247,9 +297,7 @@ export function AuthPage() {
                     placeholder="Email"
                   />
                 </div>
-                {/* CAMPO CONTRASEÑA CON VISIBILIDAD */}
                 <div className="relative">
-                  {/* CAMBIO: top-2.5 -> top-3 */}
                   <span className="absolute left-3 top-3 text-zinc-400">
                     <LockIcon />
                   </span>
@@ -264,7 +312,6 @@ export function AuthPage() {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    // CAMBIO: top-2.5 -> top-3
                     className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none"
                     aria-label={
                       showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
@@ -285,9 +332,9 @@ export function AuthPage() {
 
             {/* Formulario de Inicio de Sesión */}
             {tab === "login" && (
-              <form onSubmit={handleAuth} className="space-y-4">
+              // 👇 --- AÑADIDO noValidate ---
+              <form onSubmit={handleAuth} className="space-y-4" noValidate>
                 <div className="relative">
-                  {/* CAMBIO: top-2.5 -> top-3 */}
                   <span className="absolute left-3 top-3 text-zinc-400">
                     <EmailIcon />
                   </span>
@@ -300,9 +347,7 @@ export function AuthPage() {
                     placeholder="Email"
                   />
                 </div>
-                {/* CAMPO CONTRASEÑA CON VISIBILIDAD */}
                 <div className="relative">
-                  {/* CAMBIO: top-2.5 -> top-3 */}
                   <span className="absolute left-3 top-3 text-zinc-400">
                     <LockIcon />
                   </span>
@@ -317,7 +362,6 @@ export function AuthPage() {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    // CAMBIO: top-2.5 -> top-3
                     className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none"
                     aria-label={
                       showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
@@ -336,9 +380,8 @@ export function AuthPage() {
               </form>
             )}
 
-            {/* Separador y Opciones Sociales */}
+            {/* Separador y Opciones Sociales (no cambia) */}
             <div className="mt-6">
-              {/* ... (sin cambios aquí) ... */}
               <div className="relative mb-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-zinc-600"></div>

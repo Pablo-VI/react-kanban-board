@@ -15,7 +15,6 @@ import {
 import { Column } from "./components/Column";
 import { AddColumnForm } from "./components/AddColumnForm";
 import { arrayMove } from "@dnd-kit/sortable";
-// 👇 CORRECCIÓN: Importamos el tipo ColumnType para usarlo en las funciones
 import {
   useBoardStore,
   type Card as CardType,
@@ -26,6 +25,7 @@ import { Card } from "./components/Card";
 import { AuthPage } from "./components/AuthPage";
 import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import type { Session } from "@supabase/supabase-js";
+import { Toaster, toast } from "react-hot-toast";
 
 function App() {
   // ... (Esta parte no cambia)
@@ -273,7 +273,6 @@ function Board() {
     _updateCardOrders(cardsToUpdate);
   }
 
-  // ... (El resto del componente Board no cambia)
   const handleOpenDeleteModal = (columnId: string, columnTitle: string) => {
     setColumnToDelete({ id: columnId, title: columnTitle });
     setIsDeleteModalOpen(true);
@@ -291,6 +290,15 @@ function Board() {
     }
   };
 
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Error al cerrar sesión: " + error.message);
+    } else {
+      toast.success("Has cerrado sesión. ¡Hasta pronto!");
+    }
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -298,12 +306,22 @@ function Board() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
+      <Toaster
+        position="bottom-right"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: "#333",
+            color: "#fff",
+          },
+        }}
+      />
       <div className="bg-zinc-950 text-white min-h-screen p-8 overflow-x-auto">
         <header className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Kanba</h1>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={handleSignOut}
               className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
             >
               Cerrar Sesión

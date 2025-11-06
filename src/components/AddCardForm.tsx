@@ -1,5 +1,11 @@
 // src/components/AddCardForm.tsx
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  type KeyboardEvent,
+  useCallback,
+} from "react";
 import { useBoardStore } from "../store";
 
 type AddCardFormProps = {
@@ -12,30 +18,33 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
   const [title, setTitle] = useState("");
   const formRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Función para guardar
-  const handleSubmit = () => {
-    if (title.trim() !== "") {
-      addCard(columnId, title); // Solo añadimos título desde aquí
+  const handleSubmit = async () => {
+    if (title.trim() === "" || isLoading) return;
+
+    setIsLoading(true);
+    const success = await addCard(columnId, title);
+    setIsLoading(false);
+
+    if (success) {
       setTitle("");
-      textareaRef.current?.focus(); // Mantenemos el foco para añadir más tarjetas
+      textareaRef.current?.focus();
     }
   };
 
-  // Función para cancelar
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
+    if (isLoading) return;
     setIsAdding(false);
     setTitle("");
-  };
+  }, [isLoading]);
 
-  // Auto-foco al abrir
   useEffect(() => {
     if (isAdding) {
       textareaRef.current?.focus();
     }
   }, [isAdding]);
 
-  // Manejador para clic afuera y ESC
   useEffect(() => {
     if (!isAdding) return;
 
@@ -48,11 +57,10 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isAdding]);
+  }, [isAdding, handleCancel]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      // Enter para guardar (Shift+Enter para nueva línea)
       e.preventDefault();
       handleSubmit();
     } else if (e.key === "Escape") {
@@ -60,7 +68,6 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
     }
   };
 
-  // Vista cerrada (botón)
   if (!isAdding) {
     return (
       <button
@@ -72,7 +79,6 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
     );
   }
 
-  // Vista abierta (formulario)
   return (
     <div ref={formRef} className="flex flex-col gap-2">
       <textarea
@@ -83,18 +89,21 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
         placeholder="Introduce un título para esta tarjeta..."
         rows={3}
         className="bg-zinc-700 text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none shadow-inner"
+        disabled={isLoading}
       />
       <div className="flex gap-2 items-center">
         <button
           onClick={handleSubmit}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded disabled:opacity-50"
+          disabled={isLoading}
         >
-          Añadir tarjeta
+          {isLoading ? "..." : "Añadir tarjeta"}
         </button>
         <button
           onClick={handleCancel}
-          className="text-gray-400 hover:text-white"
+          className="text-gray-400 hover:text-white disabled:opacity-50"
           aria-label="Cancelar"
+          disabled={isLoading}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

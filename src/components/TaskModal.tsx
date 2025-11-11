@@ -14,6 +14,7 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
   const [description, setDescription] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
 
+  // ... (useEffect de show/close no cambia)
   useEffect(() => {
     if (isOpen) {
       dialogRef.current?.showModal();
@@ -22,6 +23,7 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
     }
   }, [isOpen]);
 
+  // ... (useEffect de backdrop click no cambia)
   useEffect(() => {
     const dialogElement = dialogRef.current;
     const handleMouseDown = (event: MouseEvent) => {
@@ -39,21 +41,21 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
     };
   }, [isOpen, onClose]);
 
+  // ... (useEffect de rellenar datos no cambia)
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
-      // Auto-focus al input
       setTimeout(() => {
         dialogRef.current?.querySelector("input")?.focus();
       }, 10);
     }
   }, [task, isOpen]);
 
+  // ... (handleSave y handleKeyDown no cambian)
   const handleSave = () => {
-    if (!task) return; // Guarda de seguridad
+    if (!task) return;
     if (title.trim() === "") return;
-
     editCard(task.id, title, description);
     onClose();
   };
@@ -76,10 +78,10 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      onKeyDown={handleKeyDown} // Añadido
+      onKeyDown={handleKeyDown}
       className="bg-transparent overflow-visible rounded-none m-auto"
     >
-      <div className="p-6 bg-zinc-800 rounded-lg shadow-xl w-full max-w-md text-white">
+      <div className="p-6 bg-zinc-800 rounded-lg shadow-xl w-[50vw] max-h-[90vh] overflow-y-auto hide-scrollbar text-white">
         <h2 className="text-2xl font-bold mb-4">Editar Tarea</h2>
         <div className="flex flex-col gap-4">
           <input
@@ -94,7 +96,7 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Descripción (opcional)"
-            rows={4}
+            rows={5}
             className="bg-zinc-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           ></textarea>
         </div>

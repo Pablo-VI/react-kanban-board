@@ -316,8 +316,9 @@ function Board() {
           },
         }}
       />
-      <div className="bg-zinc-950 text-white min-h-screen p-8 overflow-x-auto hide-scrollbar">
-        <header className="flex items-center justify-between mb-8">
+
+      <div className="bg-zinc-950 text-white min-h-screen flex flex-col overflow-hidden">
+        <header className="flex items-center justify-between p-8 pb-0 flex-shrink-0">
           <h1 className="text-3xl font-bold">Kanba</h1>
           <div className="flex items-center gap-4">
             <button
@@ -328,7 +329,8 @@ function Board() {
             </button>
           </div>
         </header>
-        <main className="flex gap-6 items-start">
+
+        <main className="flex gap-6 items-start flex-grow p-8 pt-8 overflow-x-auto hide-scrollbar">
           {columns.map((column) => (
             <Column
               key={column.id}
@@ -343,28 +345,29 @@ function Board() {
           ))}
           <AddColumnForm />
         </main>
-        <DragOverlay>
-          {activeCard ? (
-            <Card
-              id={activeCard.id}
-              title={activeCard.title}
-              columnId={activeCard.columnId}
-              onClick={() => {}}
-            />
-          ) : null}
-        </DragOverlay>
-        <TaskModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          task={editingTask}
-        />
-        <DeleteConfirmationModal
-          isOpen={isDeleteModalOpen}
-          onClose={handleCloseDeleteModal}
-          onConfirm={handleConfirmDelete}
-          itemName={columnToDelete?.title || ""}
-        />
       </div>
+
+      <DragOverlay>
+        {activeCard ? (
+          <Card
+            id={activeCard.id}
+            title={activeCard.title}
+            columnId={activeCard.columnId}
+            onClick={() => {}}
+          />
+        ) : null}
+      </DragOverlay>
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        task={editingTask}
+      />
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        itemName={columnToDelete?.title || ""}
+      />
     </DndContext>
   );
 }

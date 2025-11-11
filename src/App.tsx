@@ -38,12 +38,27 @@ function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
+      const loginEvent = sessionStorage.getItem("login_event");
+      const hasOAuthHash = window.location.hash.includes("access_token");
+      const logoutEvent = sessionStorage.getItem("logout_event");
+
+      if (
+        event === "SIGNED_IN" &&
+        session &&
+        (loginEvent === "true" || hasOAuthHash)
+      ) {
         toast.success(`Bienvenido.`);
+        if (loginEvent) {
+          sessionStorage.removeItem("login_event");
+        }
+        if (hasOAuthHash) {
+          window.history.replaceState(null, "", window.location.pathname);
+        }
       }
 
-      if (event === "SIGNED_OUT") {
+      if (event === "SIGNED_OUT" && logoutEvent === "true") {
         toast.success("Has cerrado sesión. ¡Hasta pronto!");
+        sessionStorage.removeItem("logout_event");
       }
 
       setSession(session);
@@ -52,11 +67,21 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (!session) {
-    return <AuthPage />;
-  } else {
-    return <Board key={session.user.id} />;
-  }
+  return (
+    <>
+      <Toaster
+        position="bottom-right"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: "#333",
+            color: "#fff",
+          },
+        }}
+      />
+      {!session ? <AuthPage /> : <Board key={session.user.id} />}
+    </>
+  );
 }
 
 function Board() {
@@ -290,8 +315,10 @@ function Board() {
   };
 
   const handleSignOut = async () => {
+    sessionStorage.setItem("logout_event", "true");
     const { error } = await supabase.auth.signOut();
     if (error) {
+      sessionStorage.removeItem("logout_event");
       toast.error("Error al cerrar sesión: " + error.message);
     }
   };
@@ -303,17 +330,6 @@ function Board() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <Toaster
-        position="bottom-right"
-        reverseOrder={false}
-        toastOptions={{
-          style: {
-            background: "#333",
-            color: "#fff",
-          },
-        }}
-      />
-
       <div className="bg-zinc-950 text-white min-h-screen flex flex-col overflow-hidden">
         <header className="flex items-center justify-between p-8 pb-0 flex-shrink-0">
           <h1 className="text-3xl font-bold">Kanba</h1>

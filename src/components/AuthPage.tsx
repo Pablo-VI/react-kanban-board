@@ -1,10 +1,8 @@
 // src/components/AuthPage.tsx
 import React, { useState } from "react";
 import { supabase } from "../supabase";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
-// --- Iconos SVG (no cambian) ---
-// ... (EmailIcon, LockIcon, etc. están aquí)
 const EmailIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -113,11 +111,8 @@ const EyeClosedIcon = () => (
     />
   </svg>
 );
-// --- Fin Iconos SVG ---
 
-// --- Función de Traducción (no cambia) ---
 function translateAuthError(message: string): string {
-  // ... (versión completa de la función)
   if (message.includes("Invalid login credentials")) {
     return "Credenciales inválidas. Revisa tu email y contraseña.";
   }
@@ -188,14 +183,21 @@ export function AuthPage() {
           password,
         });
         if (signUpError) throw signUpError;
+
+        toast.success("¡Registro exitoso!");
+
         setTab("login");
         setShowPassword(false);
       } else {
+        sessionStorage.setItem("login_event", "true");
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (signInError) throw signInError;
+        if (signInError) {
+          sessionStorage.removeItem("login_event");
+          throw signInError;
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -211,10 +213,12 @@ export function AuthPage() {
 
   const handleOAuthLogin = async (provider: "google" | "github") => {
     setLoading(true);
+    sessionStorage.setItem("login_event", "true");
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: provider,
     });
     if (oauthError) {
+      sessionStorage.removeItem("login_event");
       const friendlyMessage = translateAuthError(oauthError.message);
       toast.error(friendlyMessage);
       setLoading(false);
@@ -227,16 +231,6 @@ export function AuthPage() {
 
   return (
     <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-black min-h-screen flex items-center justify-center font-sans">
-      <Toaster
-        position="bottom-right"
-        reverseOrder={false}
-        toastOptions={{
-          style: {
-            background: "#333",
-            color: "#fff",
-          },
-        }}
-      />
       <div className="container mx-auto px-4">
         <div className="max-w-md mx-auto bg-zinc-800 rounded-lg overflow-hidden shadow-2xl border border-zinc-700">
           <div className="text-center py-6 bg-gradient-to-r from-blue-700 to-purple-800 text-white">
@@ -245,7 +239,6 @@ export function AuthPage() {
           </div>
 
           <div className="p-8">
-            {/* ... (Selector de Pestañas no cambia) ... */}
             <div className="flex justify-center mb-6">
               <button
                 onClick={() => {
@@ -275,9 +268,7 @@ export function AuthPage() {
               </button>
             </div>
 
-            {/* Formulario de Registro */}
             {tab === "signup" && (
-              // 👇 --- AÑADIDO noValidate ---
               <form onSubmit={handleAuth} className="space-y-4" noValidate>
                 <div className="relative">
                   <span className="absolute left-3 top-3 text-zinc-400">
@@ -325,9 +316,7 @@ export function AuthPage() {
               </form>
             )}
 
-            {/* Formulario de Inicio de Sesión */}
             {tab === "login" && (
-              // 👇 --- AÑADIDO noValidate ---
               <form onSubmit={handleAuth} className="space-y-4" noValidate>
                 <div className="relative">
                   <span className="absolute left-3 top-3 text-zinc-400">
@@ -375,7 +364,6 @@ export function AuthPage() {
               </form>
             )}
 
-            {/* Separador y Opciones Sociales (no cambia) */}
             <div className="mt-6">
               <div className="relative mb-4">
                 <div className="absolute inset-0 flex items-center">

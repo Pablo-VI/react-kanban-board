@@ -4,7 +4,7 @@ type DeleteConfirmationModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  itemName: string; // El nombre de lo que se va a borrar (ej: "Columna 1")
+  itemName: string;
 };
 
 export function DeleteConfirmationModal({
@@ -23,7 +23,6 @@ export function DeleteConfirmationModal({
     }
   }, [isOpen]);
 
-  // Lógica para cerrar al hacer clic fuera (backdrop)
   useEffect(() => {
     const dialogElement = dialogRef.current;
     const handleMouseDown = (event: MouseEvent) => {
@@ -47,7 +46,7 @@ export function DeleteConfirmationModal({
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="bg-transparent overflow-visible rounded-none"
+      className="bg-transparent overflow-visible rounded-none m-auto"
     >
       <div className="p-6 bg-zinc-800 rounded-lg shadow-xl w-full max-w-md text-white">
         <h2 className="text-xl font-bold mb-4">Confirmar Eliminación</h2>

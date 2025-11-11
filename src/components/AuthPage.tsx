@@ -160,8 +160,6 @@ function translateAuthError(message: string): string {
   return "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.";
 }
 
-// 👇 --- NUEVA CONSTANTE DE REGEX ---
-// Esta regex comprueba una estructura básica + un TLD (ej. .com)
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export function AuthPage() {
@@ -190,9 +188,6 @@ export function AuthPage() {
           password,
         });
         if (signUpError) throw signUpError;
-        toast.success(
-          "¡Registro exitoso! Revisa tu email para confirmar tu cuenta."
-        );
         setTab("login");
         setShowPassword(false);
       } else {

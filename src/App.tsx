@@ -28,7 +28,6 @@ import type { Session } from "@supabase/supabase-js";
 import { Toaster, toast } from "react-hot-toast";
 
 function App() {
-  // ... (Esta parte no cambia)
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
@@ -38,7 +37,15 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        toast.success(`Bienvenido.`);
+      }
+
+      if (event === "SIGNED_OUT") {
+        toast.success("Has cerrado sesión. ¡Hasta pronto!");
+      }
+
       setSession(session);
     });
 
@@ -60,7 +67,6 @@ function Board() {
 
   const [originalColumns, setOriginalColumns] = useState(columns);
 
-  // ... (El resto de los useState y useEffects no cambian)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CardType | null>(null);
   const [activeCard, setActiveCard] = useState<
@@ -121,7 +127,6 @@ function Board() {
     setOriginalColumns(columns);
   };
 
-  // 👇 CORRECCIÓN COMPLETA: Lógica reescrita para evitar el updater y los tipos 'any'
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over) return;
@@ -142,9 +147,7 @@ function Board() {
 
     if (sourceColumnId === destColumnId) return;
 
-    // Obtenemos el estado más reciente directamente
     const currentColumns = useBoardStore.getState().columns;
-    // Creamos una copia profunda para evitar mutaciones no deseadas
     const newColumns = JSON.parse(
       JSON.stringify(currentColumns)
     ) as ColumnType[];
@@ -156,7 +159,6 @@ function Board() {
       (c: ColumnType) => c.id === destColumnId
     );
 
-    // Verificamos que los índices son válidos
     if (sourceColIndex === -1 || destColIndex === -1) return;
 
     const sourceCards = newColumns[sourceColIndex].cards;
@@ -168,7 +170,6 @@ function Board() {
     const [movedCard] = sourceCards.splice(activeCardIndex, 1);
     destCards.push(movedCard);
 
-    // Actualizamos el estado con el array ya modificado
     setColumns(newColumns);
   }
 
@@ -189,7 +190,6 @@ function Board() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // 👇 CORRECCIÓN: Añadimos tipos explícitos
     const sourceCol = columns.find((c: ColumnType) => c.id === sourceColumnId);
     const destCol = columns.find((c: ColumnType) => c.id === destColumnId);
 
@@ -206,7 +206,6 @@ function Board() {
       destCardIndex = destCol.cards.length;
     }
 
-    // 👇 CORRECCIÓN: Usamos 'const' en lugar de 'let'
     const newColumns = JSON.parse(JSON.stringify(columns)) as ColumnType[];
 
     if (sourceColumnId === destColumnId) {
@@ -294,8 +293,6 @@ function Board() {
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast.error("Error al cerrar sesión: " + error.message);
-    } else {
-      toast.success("Has cerrado sesión. ¡Hasta pronto!");
     }
   };
 

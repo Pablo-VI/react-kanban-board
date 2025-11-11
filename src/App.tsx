@@ -1,5 +1,4 @@
 // src/App.tsx
-
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import {
@@ -98,6 +97,7 @@ function Board() {
     (CardType & { columnId: string }) | null
   >(null);
   const deleteColumn = useBoardStore((state) => state.deleteColumn);
+  const renameColumn = useBoardStore((state) => state.renameColumn);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<{
     id: string;
@@ -354,6 +354,7 @@ function Board() {
               onCardClick={handleOpenEditModal}
               overColumnId={null}
               onDeleteColumn={handleOpenDeleteModal}
+              onRenameColumn={renameColumn}
             />
           ))}
           <AddColumnForm />

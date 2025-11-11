@@ -7,14 +7,14 @@ import {
 import type { Card as CardType } from "../store";
 import { Card } from "./Card";
 import { AddCardForm } from "./AddCardForm";
-import { useRef, useCallback } from "react";
-
+import { useRef, useCallback, useState, useEffect } from "react";
 type ColumnProps = {
   id: string;
   title: string;
   cards: CardType[];
   onCardClick: (task: CardType, columnId: string) => void;
   onDeleteColumn: (columnId: string, columnTitle: string) => void;
+  onRenameColumn: (columnId: string, newTitle: string) => void;
   activeCard: (CardType & { columnId: string }) | null;
   overColumnId: string | null;
 };
@@ -26,6 +26,7 @@ export function Column({
   onCardClick,
   overColumnId,
   onDeleteColumn,
+  onRenameColumn,
 }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: id,
@@ -40,6 +41,49 @@ export function Column({
     isOver || overColumnId === id ? "bg-zinc-800/60" : "bg-zinc-900/50";
 
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditedTitle(title);
+  }, [title]);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleTitleClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedTitle(title);
+  };
+
+  const handleSave = () => {
+    if (editedTitle.trim() && editedTitle !== title) {
+      onRenameColumn(id, editedTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
+
+  const handleBlur = () => {
+    handleCancel();
+  };
 
   const handleFormOpen = useCallback(() => {
     setTimeout(() => {
@@ -58,9 +102,26 @@ export function Column({
       className={`w-72 rounded-md shadow-md flex flex-col flex-shrink-0 transition-colors duration-200 ${columnBackgroundColor} max-h-[80vh]`}
     >
       <div className="group p-3 flex justify-between items-center flex-shrink-0">
-        <h2 className="text-lg font-semibold text-zinc-100 break-all">
-          {title}
-        </h2>
+        {!isEditing ? (
+          <h2
+            onClick={handleTitleClick}
+            className="text-lg font-semibold text-zinc-100 break-all cursor-pointer"
+          >
+            {title}
+          </h2>
+        ) : (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+            className="text-lg font-semibold text-zinc-100 bg-zinc-700 border border-zinc-500 rounded-md p-0.5 w-full mr-2"
+            autoFocus
+          />
+        )}
+
         <button
           onClick={() => onDeleteColumn(id, title)}
           className="opacity-0 group-hover:opacity-100 

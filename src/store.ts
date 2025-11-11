@@ -32,7 +32,8 @@ type BoardState = {
   ) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
   deleteColumn: (columnId: string) => Promise<void>;
-  setColumns: (newColumns: Column[]) => void; // ✨ ADDED: For optimistic UI updates
+  renameColumn: (columnId: string, newTitle: string) => Promise<void>;
+  setColumns: (newColumns: Column[]) => void;
   _updateCardOrders: (
     cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
   ) => Promise<void>;
@@ -44,7 +45,6 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   setColumns: (newColumns) => set({ columns: newColumns }),
 
   fetchBoard: async () => {
-    // ... (this function remains the same)
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -166,10 +166,22 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
+  renameColumn: async (columnId: string, newTitle: string) => {
+    const { error } = await supabase
+      .from("columns")
+      .update({ title: newTitle })
+      .eq("id", parseInt(columnId));
+
+    if (error) {
+      toast.error("Error al renombrar la columna: " + error.message);
+    } else {
+      toast.success("Columna renombrada");
+    }
+  },
+
   _updateCardOrders: async (
     cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
   ) => {
-    // ... (this function remains the same and is now more important)
     if (cardsToUpdate.length === 0) return;
     for (const card of cardsToUpdate) {
       const updateData: { card_order: number; column_id?: number } = {
@@ -190,5 +202,4 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       }
     }
   },
-
 }));

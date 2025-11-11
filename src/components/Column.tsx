@@ -6,7 +6,8 @@ import {
 } from "@dnd-kit/sortable";
 import type { Card as CardType } from "../store";
 import { Card } from "./Card";
-import { AddCardForm } from "./AddCardForm"; // <-- IMPORTAR
+import { AddCardForm } from "./AddCardForm";
+import { useRef, useCallback } from "react";
 
 type ColumnProps = {
   id: string;
@@ -35,9 +36,21 @@ export function Column({
   });
 
   const cardIds = cards.map((card) => card.id);
-
   const columnBackgroundColor =
     isOver || overColumnId === id ? "bg-zinc-800/60" : "bg-zinc-900/50";
+
+  const scrollableContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleFormOpen = useCallback(() => {
+    setTimeout(() => {
+      if (scrollableContainerRef.current) {
+        scrollableContainerRef.current.scrollTo({
+          top: scrollableContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 50);
+  }, []);
 
   return (
     <div
@@ -75,7 +88,10 @@ export function Column({
         </button>
       </div>
 
-      <div className="p-3 pt-0 pb-0 space-y-3 overflow-y-auto flex-grow hide-scrollbar">
+      <div
+        ref={scrollableContainerRef}
+        className="p-3 pt-0 pb-0 space-y-3 overflow-y-auto flex-grow hide-scrollbar"
+      >
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
             <Card
@@ -87,10 +103,8 @@ export function Column({
             />
           ))}
         </SortableContext>
-{/*         <div className="p-3 pt-2 flex-shrink-0">
- */}          <AddCardForm columnId={id} />
-{/*         </div>
- */}      </div>
+        <AddCardForm columnId={id} onFormOpen={handleFormOpen} />
+      </div>
     </div>
   );
 }

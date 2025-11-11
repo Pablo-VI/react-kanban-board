@@ -10,9 +10,10 @@ import { useBoardStore } from "../store";
 
 type AddCardFormProps = {
   columnId: string;
+  onFormOpen: () => void;
 };
 
-export function AddCardForm({ columnId }: AddCardFormProps) {
+export function AddCardForm({ columnId, onFormOpen }: AddCardFormProps) {
   const addCard = useBoardStore((state) => state.addCard);
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
@@ -22,11 +23,9 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
 
   const handleSubmit = async () => {
     if (title.trim() === "" || isLoading) return;
-
     setIsLoading(true);
     const success = await addCard(columnId, title);
     setIsLoading(false);
-
     if (success) {
       setTitle("");
       textareaRef.current?.focus();
@@ -42,12 +41,12 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
   useEffect(() => {
     if (isAdding) {
       textareaRef.current?.focus();
+      onFormOpen();
     }
-  }, [isAdding]);
+  }, [isAdding, onFormOpen]);
 
   useEffect(() => {
     if (!isAdding) return;
-
     const handleClickOutside = (event: MouseEvent) => {
       if (formRef.current && !formRef.current.contains(event.target as Node)) {
         handleCancel();
@@ -71,7 +70,10 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
   if (!isAdding) {
     return (
       <button
-        onClick={() => setIsAdding(true)}
+        onClick={() => {
+          setIsAdding(true);
+          onFormOpen();
+        }}
         className="w-full text-left p-2.5 mb-3 text-zinc-400 hover:text-white hover:bg-zinc-700/70 rounded-md transition-colors"
       >
         + Añade una tarjeta
@@ -80,7 +82,7 @@ export function AddCardForm({ columnId }: AddCardFormProps) {
   }
 
   return (
-    <div ref={formRef} className="flex flex-col gap-2">
+    <div ref={formRef} className="flex flex-col gap-2 pb-2">
       <textarea
         ref={textareaRef}
         value={title}

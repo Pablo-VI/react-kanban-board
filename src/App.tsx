@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 import {
   DndContext,
@@ -89,6 +89,8 @@ function Board() {
   const setColumns = useBoardStore((state) => state.setColumns);
   const _updateCardOrders = useBoardStore((state) => state._updateCardOrders);
 
+  const lastLocalUpdateRef = useRef<number>(0);
+
   const [originalColumns, setOriginalColumns] = useState(columns);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -114,18 +116,28 @@ function Board() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "cards" },
-        () => fetchBoard()
+        () => {
+          if (Date.now() - lastLocalUpdateRef.current < 1000) {
+            return;
+          }
+          fetchBoard();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "columns" },
-        () => fetchBoard()
+        () => {
+          if (Date.now() - lastLocalUpdateRef.current < 1000) {
+            return;
+          }
+          fetchBoard();
+        }
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchBoard]);
+  }, [fetchBoard]); // La dependencia de fetchBoard es correcta
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -263,6 +275,8 @@ function Board() {
     }
 
     setColumns(newColumns);
+
+    lastLocalUpdateRef.current = Date.now();
 
     const cardsToUpdate: {
       id: string;

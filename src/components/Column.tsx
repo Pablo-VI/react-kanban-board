@@ -117,6 +117,7 @@ export function Column({
             onChange={(e) => setEditedTitle(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
+            maxLength={40}
             className="text-lg font-semibold text-zinc-100 bg-zinc-700 border border-zinc-500 rounded-md p-0.5 w-full mr-2"
             autoFocus
           />

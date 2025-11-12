@@ -90,6 +90,7 @@ export function AddCardForm({ columnId, onFormOpen }: AddCardFormProps) {
         onKeyDown={handleKeyDown}
         placeholder="Introduce un título para esta tarjeta..."
         rows={3}
+        maxLength={100}
         className="bg-zinc-700 text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none shadow-inner"
         disabled={isLoading}
       />

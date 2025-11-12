@@ -100,6 +100,7 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Descripción (opcional)"
             rows={5}
+            maxLength={1000}
             className="bg-zinc-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           ></textarea>
         </div>

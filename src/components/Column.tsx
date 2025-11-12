@@ -8,14 +8,14 @@ import type { Card as CardType } from "../store";
 import { Card } from "./Card";
 import { AddCardForm } from "./AddCardForm";
 import { useRef, useCallback, useState, useEffect } from "react";
+
 type ColumnProps = {
   id: string;
   title: string;
   cards: CardType[];
-  onCardClick: (task: CardType, columnId: string) => void;
+  onCardClick: (task: CardType) => void;
   onDeleteColumn: (columnId: string, columnTitle: string) => void;
   onRenameColumn: (columnId: string, newTitle: string) => void;
-  activeCard: (CardType & { columnId: string }) | null;
   overColumnId: string | null;
 };
 
@@ -157,10 +157,9 @@ export function Column({
           {cards.map((card) => (
             <Card
               key={card.id}
-              id={card.id}
-              title={card.title}
+              card={card}
+              onClick={() => onCardClick(card)}
               columnId={id}
-              onClick={() => onCardClick(card, id)}
             />
           ))}
         </SortableContext>

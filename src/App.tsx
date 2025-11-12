@@ -332,7 +332,7 @@ function Board() {
     >
       <div className="bg-zinc-950 text-white min-h-screen flex flex-col overflow-hidden">
         <header className="flex items-center justify-between p-8 pb-0 flex-shrink-0">
-          <h1 className="text-3xl font-bold">Kanba</h1>
+          <h1 className="text-3xl font-bold">Mi tablero</h1>
           <div className="flex items-center gap-4">
             <button
               onClick={handleSignOut}
@@ -350,7 +350,6 @@ function Board() {
               id={column.id}
               title={column.title}
               cards={column.cards}
-              activeCard={activeCard}
               onCardClick={handleOpenEditModal}
               overColumnId={null}
               onDeleteColumn={handleOpenDeleteModal}
@@ -364,10 +363,10 @@ function Board() {
       <DragOverlay>
         {activeCard ? (
           <Card
-            id={activeCard.id}
-            title={activeCard.title}
-            columnId={activeCard.columnId}
+            card={activeCard}
+            isActive={true}
             onClick={() => {}}
+            columnId={activeCard.columnId}
           />
         ) : null}
       </DragOverlay>

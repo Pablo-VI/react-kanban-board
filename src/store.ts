@@ -8,6 +8,7 @@ export type Card = {
   title: string;
   description?: string;
   card_order?: number;
+  is_done: boolean;
 };
 
 export type Column = {
@@ -28,6 +29,7 @@ type BoardState = {
   editCard: (
     cardId: string,
     title: string,
+    isDone: boolean,
     description?: string
   ) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
@@ -37,6 +39,7 @@ type BoardState = {
   _updateCardOrders: (
     cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
   ) => Promise<void>;
+  toggleCardDone: (cardId: string, isDone: boolean) => Promise<void>;
 };
 
 export const useBoardStore = create<BoardState>((set, get) => ({
@@ -55,7 +58,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
     const { data: columnsData, error } = await supabase
       .from("columns")
-      .select("id, title, cards ( id, title, description, card_order )")
+      .select(
+        "id, title, cards ( id, title, description, card_order, is_done )"
+      )
       .eq("user_id", user.id)
       .order("id", { ascending: true })
       .order("card_order", { foreignTable: "cards", ascending: true });
@@ -113,6 +118,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       description,
       column_id: parseInt(columnId),
       card_order: newOrder,
+      is_done: false,
     });
     if (error) {
       toast.error("Error al crear la tarjeta: " + error.message);
@@ -122,15 +128,28 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     return true;
   },
 
-  editCard: async (cardId, title, description) => {
+  editCard: async (cardId, title, isDone, description) => {
     const { error } = await supabase
       .from("cards")
-      .update({ title, description })
+      .update({ title, is_done: isDone, description })
       .eq("id", parseInt(cardId));
     if (error) {
       toast.error("Error al guardar la tarjeta: " + error.message);
     } else {
       toast.success("Tarjeta guardada");
+    }
+  },
+
+  toggleCardDone: async (cardId: string, isDone: boolean) => {
+    const { error } = await supabase
+      .from("cards")
+      .update({ is_done: isDone })
+      .eq("id", parseInt(cardId));
+
+    if (error) {
+      toast.error("Error al actualizar la tarjeta: " + error.message);
+    } else {
+      toast.success("Tarjeta actualizada");
     }
   },
 

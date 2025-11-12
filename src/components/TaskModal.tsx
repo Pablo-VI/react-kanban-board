@@ -10,11 +10,13 @@ type TaskModalProps = {
 
 export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
   const { editCard } = useBoardStore();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [isDone, setIsDone] = useState(false);
+
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // ... (useEffect de show/close no cambia)
   useEffect(() => {
     if (isOpen) {
       dialogRef.current?.showModal();
@@ -23,7 +25,6 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
     }
   }, [isOpen]);
 
-  // ... (useEffect de backdrop click no cambia)
   useEffect(() => {
     const dialogElement = dialogRef.current;
     const handleMouseDown = (event: MouseEvent) => {
@@ -41,22 +42,24 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
     };
   }, [isOpen, onClose]);
 
-  // ... (useEffect de rellenar datos no cambia)
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
+      setIsDone(task.is_done);
+
       setTimeout(() => {
         dialogRef.current?.querySelector("input")?.focus();
       }, 10);
     }
   }, [task, isOpen]);
 
-  // ... (handleSave y handleKeyDown no cambian)
   const handleSave = () => {
     if (!task) return;
     if (title.trim() === "") return;
-    editCard(task.id, title, description);
+
+    editCard(task.id, title, isDone, description);
+
     onClose();
   };
 
@@ -100,6 +103,20 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
             className="bg-zinc-700 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           ></textarea>
         </div>
+
+        <div className="flex items-center gap-2 mt-4 text-sm">
+          <input
+            type="checkbox"
+            id="isDone"
+            checked={isDone}
+            onChange={(e) => setIsDone(e.target.checked)}
+            className="w-4 h-4 rounded accent-emerald-500"
+          />
+          <label htmlFor="isDone" className="text-zinc-300">
+            Completada
+          </label>
+        </div>
+
         <div className="mt-6 flex justify-end gap-4">
           <button
             onClick={onClose}

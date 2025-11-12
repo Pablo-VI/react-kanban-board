@@ -1,18 +1,22 @@
 // src/components/Card.tsx
+import React, { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useBoardStore } from "../store";
+import { type Card as CardType, useBoardStore } from "../store";
 
-type CardProps = {
-  id: string;
-  title: string;
+interface CardProps {
+  card: CardType;
+  isActive?: boolean;
+  onClick: (card: CardType) => void;
   columnId: string;
-  onClick: () => void;
-};
+}
 
-export function Card({ id, title, columnId, onClick }: CardProps) {
-  const deleteCard = useBoardStore((state) => state.deleteCard);
-
+export const Card: React.FC<CardProps> = ({
+  card,
+  isActive = false,
+  onClick,
+  columnId,
+}) => {
   const {
     attributes,
     listeners,
@@ -21,55 +25,89 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
     transition,
     isDragging,
   } = useSortable({
-    id: id,
+    id: card.id,
     data: {
       type: "Card",
-      cardId: id,
+      card: card,
       columnId: columnId,
     },
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
     transition,
+    transform: CSS.Transform.toString(transform),
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const toggleCardDone = useBoardStore((state) => state.toggleCardDone);
+  const deleteCard = useBoardStore((state) => state.deleteCard);
+
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
-    deleteCard(id);
+    toggleCardDone(card.id, e.target.checked);
   };
 
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="bg-zinc-700 p-3 rounded-md shadow-md opacity-50 border-2 border-blue-500 cursor-grab relative h-[60px]"
-      />
-    );
-  }
+  const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    deleteCard(card.id);
+  };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
       {...listeners}
-      onClick={onClick}
-      className="bg-zinc-700 p-3 rounded-md shadow-md flex items-center justify-between cursor-grab relative group"
+      {...attributes}
+      className={`group relative p-4 mb-3 bg-neutral-800 rounded-lg shadow-md cursor-grab active:cursor-grabbing
+                  ${isActive ? "ring-2 ring-blue-500" : ""} 
+                  ${
+                    isDragging ? "opacity-0" : card.is_done ? "opacity-60" : ""
+                  }`}
+      onClick={() => onClick(card)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <p className="text-white text-sm break-all pr-8">{title}</p>
+      <div className="flex items-center">
+        <div
+          className={`
+            absolute top-[56%] left-4 transform -translate-y-1/2
+            transition-all duration-300 ease-in-out
+            ${
+              isHovered || card.is_done
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 -translate-x-full"
+            }
+          `}
+        >
+          <input
+            type="checkbox"
+            checked={card.is_done}
+            onChange={handleCheckboxChange}
+            onClick={(e) => e.stopPropagation()}
+            className="w-5 h-5 appearance-none border-2 border-white rounded-full bg-transparent checked:bg-emerald-500 checked:border-emerald-500 cursor-pointer"
+            style={{ transition: "background-color 0.2s, border-color 0.2s" }}
+          />
+        </div>
 
-      {/* 👇 MODIFICACIÓN: Ajustamos el tamaño del SVG y los paddings del botón */}
+        <h3
+          className={`
+            text-lg font-medium transition-all duration-300 ease-in-out
+            ${isHovered || card.is_done ? "ml-8" : "ml-0"}
+            ${card.is_done ? "line-through text-gray-400" : "text-white"} 
+          `}
+        >
+          {card.title}
+        </h3>
+      </div>
+
       <button
-        onClick={handleDelete}
-        className="absolute right-1.5 w-6 h-6 rounded-full text-zinc-400 opacity-0 group-hover:opacity-100 
-                   hover:bg-red-500 hover:text-white 
-                   active:bg-red-700 active:text-white 
-                   transition-all duration-150 focus:outline-none
-                   flex items-center justify-center
-                   cursor-pointer" 
-        aria-label="Eliminar tarea"
+        onClick={handleDeleteClick}
+        className="absolute top-[calc(var(--spacing)*4.2)] right-2 p-1 
+                   opacity-0 group-hover:opacity-100 
+                   text-gray-400 hover:text-red-500 active:text-red-700
+                   transition-opacity duration-150 focus:outline-none"
+        aria-label={`Eliminar tarea ${card.title}`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -77,7 +115,7 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
           viewBox="0 0 24 24"
           strokeWidth={2.5}
           stroke="currentColor"
-          className="w-4 h-4" // <-- El SVG mantiene su tamaño, ahora el botón se ajusta a él
+          className="w-5 h-5"
         >
           <path
             strokeLinecap="round"
@@ -86,7 +124,6 @@ export function Card({ id, title, columnId, onClick }: CardProps) {
           />
         </svg>
       </button>
-      {/* 👆 FIN MODIFICACIÓN */}
     </div>
   );
-}
+};

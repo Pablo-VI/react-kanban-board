@@ -117,7 +117,7 @@ function Board() {
         "postgres_changes",
         { event: "*", schema: "public", table: "cards" },
         () => {
-          if (Date.now() - lastLocalUpdateRef.current < 1000) {
+          if (Date.now() - lastLocalUpdateRef.current < 3000) {
             return;
           }
           fetchBoard();
@@ -127,7 +127,7 @@ function Board() {
         "postgres_changes",
         { event: "*", schema: "public", table: "columns" },
         () => {
-          if (Date.now() - lastLocalUpdateRef.current < 1000) {
+          if (Date.now() - lastLocalUpdateRef.current < 3000) {
             return;
           }
           fetchBoard();
@@ -137,7 +137,7 @@ function Board() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchBoard]); // La dependencia de fetchBoard es correcta
+  }, [fetchBoard]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })

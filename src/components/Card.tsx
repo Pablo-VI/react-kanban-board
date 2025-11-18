@@ -59,7 +59,7 @@ export const Card: React.FC<CardProps> = ({
       style={style}
       {...listeners}
       {...attributes}
-      className={`group relative p-4 mb-3 bg-neutral-800 rounded-lg shadow-md cursor-grab active:cursor-grabbing
+      className={`group relative mb-3 bg-neutral-800 rounded-lg shadow-md cursor-grab active:cursor-grabbing
                   ${isActive ? "ring-2 ring-blue-500" : ""} 
                   ${
                     isDragging ? "opacity-0" : card.is_done ? "opacity-60" : ""
@@ -68,42 +68,43 @@ export const Card: React.FC<CardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center">
-        <div
-          className={`
-            absolute top-[56%] left-4 transform -translate-y-1/2
-            transition-all duration-300 ease-in-out
-            ${
-              isHovered || card.is_done
-                ? "opacity-100 translate-x-0"
-                : "opacity-0 -translate-x-full"
-            }
-          `}
-        >
-          <input
-            type="checkbox"
-            checked={card.is_done}
-            onChange={handleCheckboxChange}
-            onClick={(e) => e.stopPropagation()}
-            className="w-5 h-5 appearance-none border-2 border-white rounded-full bg-transparent checked:bg-emerald-500 checked:border-emerald-500 cursor-pointer"
-            style={{ transition: "background-color 0.2s, border-color 0.2s" }}
-          />
-        </div>
-
-        <h3
-          className={`
-            text-lg font-medium transition-all duration-300 ease-in-out
-            ${isHovered || card.is_done ? "ml-8" : "ml-0"}
-            ${card.is_done ? "line-through text-gray-400" : "text-white"} 
-          `}
-        >
-          {card.title}
-        </h3>
+      <div
+        className={`
+          absolute top-1/2 left-4 transform -translate-y-1/2
+          transition-all duration-300 ease-in-out
+          ${
+            isHovered || card.is_done
+              ? "opacity-100 translate-x-0"
+              : "opacity-0 -translate-x-full"
+          }
+        `}
+      >
+        <input
+          type="checkbox"
+          checked={card.is_done}
+          onChange={handleCheckboxChange}
+          onClick={(e) => e.stopPropagation()}
+          className="w-5 h-5 appearance-none border-2 border-white rounded-full bg-transparent checked:bg-emerald-500 checked:border-emerald-500 cursor-pointer"
+          style={{ transition: "background-color 0.2s, border-color 0.2s" }}
+        />
       </div>
+
+      <h3
+        className={`
+          text-lg font-medium 
+          transition-all duration-300 ease-in-out  p-4 pr-8
+          ${isHovered || card.is_done ? "pl-10" : "pl-4"}
+          break-words text-justify ${
+            card.is_done ? "line-through text-gray-400" : "text-white"
+          }
+        `}
+      >
+        {card.title}
+      </h3>
 
       <button
         onClick={handleDeleteClick}
-        className="absolute top-[calc(var(--spacing)*4.2)] right-2 p-1 
+        className="absolute top-1/2 right-0.5 p-1 transform -translate-y-1/2
                    opacity-0 group-hover:opacity-100 
                    text-gray-400 hover:text-red-500 active:text-red-700
                    transition-opacity duration-150 focus:outline-none cursor-pointer"

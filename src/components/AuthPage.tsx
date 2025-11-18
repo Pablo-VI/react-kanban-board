@@ -1,8 +1,29 @@
 // src/components/AuthPage.tsx
+
+/**
+ * ÍNDICE DE CONTENIDOS
+ * ------------------------------------------------------------------
+ * 1. Importaciones y Tipos
+ * 2. Iconos SVG (Componentes auxiliares)
+ * 3. Funciones de Utilidad (Traducción de errores)
+ * 4. Constantes (Regex)
+ * 5. Componente Principal AuthPage
+ * 5.1. Estados Locales
+ * 5.2. Manejadores de Autenticación (Email/Pass, OAuth)
+ * 5.3. Renderizado Principal
+ * 5.3.1. Cabecera y Pestañas
+ * 5.3.2. Formularios (Login/Signup)
+ * 5.3.3. Botones OAuth
+ * 5.3.4. Footer
+ * ------------------------------------------------------------------
+ */
+
+/* 1. Importaciones y Tipos */
 import React, { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
 
+/* 2. Iconos SVG */
 const EmailIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -134,64 +155,69 @@ const EyeClosedIcon = () => (
   </svg>
 );
 
+/* 3. Funciones de Utilidad (Traducción de errores) */
 function translateAuthError(message: string): string {
-  if (message.includes("Invalid login credentials")) {
-    return "Credenciales inválidas. Revisa tu email y contraseña.";
-  }
-  if (message.includes("Email not confirmed")) {
-    return "Email no confirmado. Por favor, revisa tu bandeja de entrada.";
-  }
-  if (message.includes("User already registered")) {
-    return "Este email ya está registrado. Intenta iniciar sesión.";
-  }
-  if (message.includes("Unable to validate email address: invalid format")) {
+  if (message.includes("Invalid login credentials"))
+    return `Credenciales inválidas. 
+  Revisa tu email y contraseña.`;
+  if (message.includes("Email not confirmed"))
+    return `Email no confirmado. 
+  Por favor, revisa tu bandeja de entrada.`;
+  if (message.includes("User already registered"))
+    return `Este email ya está registrado. 
+  Intenta iniciar sesión.`;
+  if (message.includes("Unable to validate email address: invalid format"))
     return "El formato del email no es válido.";
-  }
-  if (message.includes("Signup requires a valid password")) {
+  if (message.includes("Signup requires a valid password"))
     return "La contraseña no puede estar vacía.";
-  }
   if (
     message.includes("Password should contain at least one character of each")
-  ) {
-    return "La contraseña no es segura. Debe contener al menos: una minúscula, una mayúscula, un número y un símbolo (ej. !@#$%).";
-  }
-  if (message.includes("Password should be at least 8 characters")) {
+  )
+    return `La contraseña no es segura. 
+    Debe contener al menos: una minúscula, una mayúscula, un número y un símbolo. 
+    (ej. !@#$%)`;
+  if (message.includes("Password should be at least 8 characters"))
     return "La contraseña debe tener al menos 8 caracteres.";
-  }
-  if (message.includes("Email rate limit exceeded")) {
-    return "Has superado el límite de intentos. Por favor, espera un momento.";
-  }
-  if (message.includes("Too many requests")) {
-    return "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde.";
-  }
-  if (message.includes("OAuth state cookie not found")) {
-    return "Error de autenticación (cookie no encontrada). Por favor, inténtalo de nuevo.";
-  }
-  if (message.includes("Error getting user from external provider")) {
-    return "No se pudo obtener la información de tu proveedor (Google, GitHub, etc.).";
-  }
-  if (message.includes("NetworkError when attempting to fetch resource")) {
-    return "Error de red. No se pudo conectar con el servidor.";
-  }
+  if (message.includes("Email rate limit exceeded"))
+    return `Has superado el límite de intentos. Por favor, espera un momento.`;
+  if (message.includes("Too many requests"))
+    return `Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde.`;
+  if (message.includes("OAuth state cookie not found"))
+    return `Error de autenticación (cookie no encontrada). 
+  Por favor, inténtalo de nuevo.`;
+  if (message.includes("Error getting user from external provider"))
+    return "No se pudo obtener la información de tu proveedor (Google, GitHub).";
+  if (message.includes("NetworkError when attempting to fetch resource"))
+    return `Error de red. 
+  No se pudo conectar con el servidor.`;
+
   console.error("Error de Supabase no traducido:", message);
-  return "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.";
+  return `Ha ocurrido un error inesperado. 
+  Por favor, inténtalo de nuevo.`;
 }
 
+/* 4. Constantes */
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
+/* 5. Componente Principal AuthPage */
 export function AuthPage() {
+  /* 5.1. Estados Locales */
   const [tab, setTab] = useState<"signup" | "login">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  /* 5.2. Manejadores de Autenticación */
+
+  // Manejo de Login/Registro con Email
   const handleAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!EMAIL_REGEX.test(email)) {
       toast.error(
-        "El formato del email no es válido (ej. usuario@dominio.com)"
+        `El formato del email no es válido 
+        (ej. usuario@dominio.com)`
       );
       return;
     }
@@ -233,6 +259,7 @@ export function AuthPage() {
     }
   };
 
+  // Manejo de Login con OAuth (Google/GitHub)
   const handleOAuthLogin = async (provider: "google" | "github") => {
     setLoading(true);
     sessionStorage.setItem("login_event", "true");
@@ -251,16 +278,19 @@ export function AuthPage() {
     setShowPassword(!showPassword);
   };
 
+  /* 5.3. Renderizado Principal */
   return (
     <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-black min-h-screen flex flex-col font-sans">
       <div className="flex-grow flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-zinc-800 rounded-lg overflow-hidden shadow-2xl border border-zinc-700">
+          {/* 5.3.1. Cabecera */}
           <div className="text-center py-6 bg-gradient-to-r from-blue-700 to-purple-800 text-white">
             <h1 className="text-3xl font-bold">¡Bienvenido!</h1>
             <p className="mt-2 text-zinc-300">Únete a tu espacio de trabajo</p>
           </div>
 
           <div className="p-8">
+            {/* Pestañas de Login/Registro */}
             <div className="flex justify-center mb-6">
               <button
                 onClick={() => {
@@ -290,6 +320,8 @@ export function AuthPage() {
               </button>
             </div>
 
+            {/* 5.3.2. Formularios */}
+            {/* Formulario de Registro */}
             {tab === "signup" && (
               <form onSubmit={handleAuth} className="space-y-4" noValidate>
                 <div className="relative">
@@ -340,6 +372,7 @@ export function AuthPage() {
               </form>
             )}
 
+            {/* Formulario de Login */}
             {tab === "login" && (
               <form onSubmit={handleAuth} className="space-y-4" noValidate>
                 <div className="relative">
@@ -390,6 +423,7 @@ export function AuthPage() {
               </form>
             )}
 
+            {/* 5.3.3. Botones OAuth */}
             <div className="mt-6">
               <div className="relative mb-4">
                 <div className="absolute inset-0 flex items-center">
@@ -421,6 +455,8 @@ export function AuthPage() {
           </div>
         </div>
       </div>
+
+      {/* 5.3.4. Footer */}
       <footer className="w-full py-6 text-center text-zinc-500 bg-black/20 backdrop-blur-sm mt-auto">
         <div className="container mx-auto px-4 flex flex-col items-center gap-3">
           <p className="text-sm" data-lang="footerText">

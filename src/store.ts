@@ -1,8 +1,29 @@
 // src/store.ts
+
+/**
+ * ÍNDICE DE CONTENIDOS
+ * ------------------------------------------------------------------
+ * 1. Importaciones
+ * 2. Definición de Tipos (Card, Column, BoardState)
+ * 3. Creación del Store de Zustand
+ * 3.1. Estado Inicial
+ * 3.2. Setters Simples
+ * 3.3. Acciones Asíncronas (Interacciones con Supabase)
+ * 3.3.1. Fetch Board (Carga Inicial)
+ * 3.3.2. Add Column / Add Card
+ * 3.3.3. Edit Card / Toggle Card Done
+ * 3.3.4. Delete Card / Delete Column
+ * 3.3.5. Rename Column
+ * 3.3.6. Update Card Orders (Reordenamiento)
+ * ------------------------------------------------------------------
+ */
+
+/* 1. Importaciones */
 import { create } from "zustand";
 import { supabase } from "./supabase";
 import { toast } from "react-hot-toast";
 
+/* 2. Definición de Tipos */
 export type Card = {
   id: string;
   title: string;
@@ -19,6 +40,7 @@ export type Column = {
 
 type BoardState = {
   columns: Column[];
+  // Acciones
   fetchBoard: () => Promise<void>;
   addColumn: (title: string) => Promise<boolean>;
   addCard: (
@@ -42,20 +64,28 @@ type BoardState = {
   toggleCardDone: (cardId: string, isDone: boolean) => Promise<void>;
 };
 
+/* 3. Creación del Store de Zustand */
 export const useBoardStore = create<BoardState>((set, get) => ({
+  /* 3.1. Estado Inicial */
   columns: [],
 
+  /* 3.2. Setters Simples */
   setColumns: (newColumns) => set({ columns: newColumns }),
 
+  /* 3.3. Acciones Asíncronas */
+
+  /* 3.3.1. Fetch Board */
   fetchBoard: async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
     if (!user) {
       set({ columns: [] });
       return;
     }
 
+    // Consulta relacional: Columnas -> Tarjetas
     const { data: columnsData, error } = await supabase
       .from("columns")
       .select(
@@ -73,6 +103,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       set({ columns: [] });
       return;
     }
+
+    // Formateo de IDs a string para compatibilidad con DnD Kit
     const formattedColumns: Column[] = columnsData.map((col) => ({
       ...col,
       id: col.id.toString(),
@@ -81,17 +113,21 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         id: card.id.toString(),
       })),
     }));
+
     set({ columns: formattedColumns });
   },
 
+  /* 3.3.2. Add Column / Add Card */
   addColumn: async (title) => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
     if (!user) {
       toast.error("Debes iniciar sesión para añadir una columna.");
       return false;
     }
+
     const { error } = await supabase
       .from("columns")
       .insert({ title: title, user_id: user.id });
@@ -108,11 +144,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   addCard: async (columnId, title, description) => {
     const { columns } = get();
     const targetColumn = columns.find((c) => c.id === columnId);
+
     if (!targetColumn) {
       toast.error("Error: Columna de destino no encontrada.");
       return false;
     }
+
+    // La nueva tarjeta va al final de la lista
     const newOrder = targetColumn.cards.length;
+
     const { error } = await supabase.from("cards").insert({
       title,
       description,
@@ -120,19 +160,23 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       card_order: newOrder,
       is_done: false,
     });
+
     if (error) {
       toast.error("Error al crear la tarjeta: " + error.message);
       return false;
     }
+
     toast.success("Tarjeta creada");
     return true;
   },
 
+  /* 3.3.3. Edit Card / Toggle Card Done */
   editCard: async (cardId, title, isDone, description) => {
     const { error } = await supabase
       .from("cards")
       .update({ title, is_done: isDone, description })
       .eq("id", parseInt(cardId));
+
     if (error) {
       toast.error("Error al guardar la tarjeta: " + error.message);
     } else {
@@ -153,11 +197,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
+  /* 3.3.4. Delete Card / Delete Column */
   deleteCard: async (cardId) => {
     const { error } = await supabase
       .from("cards")
       .delete()
       .eq("id", parseInt(cardId));
+
     if (error) {
       toast.error("Error al eliminar la tarjeta: " + error.message);
     } else {
@@ -166,18 +212,22 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   deleteColumn: async (columnId) => {
+    // Eliminación en cascada manual (primero tarjetas, luego columna)
     const { error: cardsError } = await supabase
       .from("cards")
       .delete()
       .eq("column_id", parseInt(columnId));
+
     if (cardsError) {
       toast.error("Error al eliminar las tarjetas: " + cardsError.message);
       return;
     }
+
     const { error: columnError } = await supabase
       .from("columns")
       .delete()
       .eq("id", parseInt(columnId));
+
     if (columnError) {
       toast.error("Error al eliminar la columna: " + columnError.message);
     } else {
@@ -185,6 +235,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
+  /* 3.3.5. Rename Column */
   renameColumn: async (columnId: string, newTitle: string) => {
     const { error } = await supabase
       .from("columns")
@@ -198,17 +249,22 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
+  /* 3.3.6. Update Card Orders */
   _updateCardOrders: async (
     cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
   ) => {
     if (cardsToUpdate.length === 0) return;
+
+    // Actualización secuencial para garantizar integridad
     for (const card of cardsToUpdate) {
       const updateData: { card_order: number; column_id?: number } = {
         card_order: card.card_order,
       };
+
       if (card.column_id !== undefined) {
         updateData.column_id = card.column_id;
       }
+
       const { error } = await supabase
         .from("cards")
         .update(updateData)
@@ -217,7 +273,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       if (error) {
         console.error("Error updating card order:", error);
         toast.error("Error al sincronizar el orden.");
-        break;
+        break; // Detener en caso de error crítico
       }
     }
   },

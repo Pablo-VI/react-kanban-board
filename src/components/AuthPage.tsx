@@ -281,6 +281,7 @@ export function AuthPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 placeholder-zinc-400"
                     placeholder="Email"
+                    maxLength={254}
                   />
                 </div>
                 <div className="relative">
@@ -294,6 +295,7 @@ export function AuthPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 pr-10 placeholder-zinc-400"
                     placeholder="Contraseña"
+                    maxLength={100}
                   />
                   <button
                     type="button"
@@ -329,6 +331,7 @@ export function AuthPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 placeholder-zinc-400"
                     placeholder="Email"
+                    maxLength={254}
                   />
                 </div>
                 <div className="relative">
@@ -342,6 +345,7 @@ export function AuthPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 pr-10 placeholder-zinc-400"
                     placeholder="Contraseña"
+                    maxLength={100}
                   />
                   <button
                     type="button"

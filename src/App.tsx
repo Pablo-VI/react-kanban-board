@@ -350,7 +350,9 @@ function Board() {
           <div className="flex items-center gap-4">
             <button
               onClick={handleSignOut}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded cursor-pointer"
+              className="border border-zinc-700 
+         hover:bg-red-700 hover:border-transparent 
+         text-white font-bold py-2 px-4 rounded cursor-pointer"
             >
               Cerrar Sesión
             </button>

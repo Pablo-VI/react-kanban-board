@@ -44,7 +44,7 @@ export function Column({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(title);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setEditedTitle(title);
@@ -73,7 +73,7 @@ export function Column({
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
       handleSave();
     } else if (e.key === "Escape") {
@@ -110,15 +110,15 @@ export function Column({
             {title}
           </h2>
         ) : (
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
             value={editedTitle}
             onChange={(e) => setEditedTitle(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
             maxLength={40}
-            className="text-lg font-semibold text-zinc-100 bg-zinc-700 border border-zinc-500 rounded-md p-0.5 w-full mr-2"
+            rows={3}
+            className="text-lg font-semibold text-zinc-100 bg-zinc-700 border border-zinc-500 rounded-md p-0.5 w-full mr-2 resize-none"
             autoFocus
           />
         )}
@@ -126,11 +126,11 @@ export function Column({
         <button
           onClick={() => onDeleteColumn(id, title)}
           className="opacity-0 group-hover:opacity-100 
-                     text-gray-400                
-                     hover:text-red-500           
-                     active:text-red-700          
-                     transition-all duration-150 focus:outline-none cursor-pointer
-                     p-1"
+                   text-gray-400                
+                   hover:text-red-500           
+                   active:text-red-700          
+                   transition-all duration-150 focus:outline-none cursor-pointer
+                   p-1"
           aria-label={`Eliminar columna ${title}`}
         >
           <svg

@@ -52,8 +52,9 @@ export function DeleteConfirmationModal({
         <h2 className="text-xl font-bold mb-4">Confirmar Eliminación</h2>
         <p className="mb-6">
           ¿Estás seguro de que quieres eliminar la columna{" "}
-          <strong className="font-bold text-red-400">"{itemName}"</strong>? Esta
-          acción no se puede deshacer.
+          <strong className="font-bold text-red-400">"{itemName}"</strong>?
+          <br />
+          Esta acción no se puede deshacer.
         </p>
         <div className="flex justify-end gap-4">
           <button

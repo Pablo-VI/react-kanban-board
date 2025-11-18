@@ -74,7 +74,7 @@ export function AddCardForm({ columnId, onFormOpen }: AddCardFormProps) {
           setIsAdding(true);
           onFormOpen();
         }}
-        className="w-full text-left p-2.5 mb-3 text-zinc-400 hover:text-white hover:bg-zinc-700/70 rounded-md transition-colors"
+        className="w-full text-left p-2.5 mb-3 text-zinc-400 hover:text-white hover:bg-zinc-700/70 rounded-md transition-colors cursor-pointer"
       >
         + Añade una tarjeta
       </button>
@@ -97,14 +97,14 @@ export function AddCardForm({ columnId, onFormOpen }: AddCardFormProps) {
       <div className="flex gap-2 items-center">
         <button
           onClick={handleSubmit}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded disabled:opacity-50"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded disabled:opacity-50 cursor-pointer"
           disabled={isLoading}
         >
           {isLoading ? "..." : "Añadir tarjeta"}
         </button>
         <button
           onClick={handleCancel}
-          className="text-gray-400 hover:text-white disabled:opacity-50"
+          className="text-gray-400 hover:text-white disabled:opacity-50 cursor-pointer"
           aria-label="Cancelar"
           disabled={isLoading}
         >

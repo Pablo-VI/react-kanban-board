@@ -62,7 +62,7 @@ export function AddColumnForm() {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="w-72 flex-shrink-0 bg-zinc-800/50 hover:bg-zinc-800/80 text-white font-bold px-4 rounded h-[76px] flex items-center justify-center"
+        className="w-72 flex-shrink-0 bg-zinc-800/50 hover:bg-zinc-800/80 text-white font-bold px-4 rounded h-[76px] flex items-center justify-center cursor-pointer"
       >
         + Añadir otra columna
       </button>
@@ -88,14 +88,14 @@ export function AddColumnForm() {
       <div className="flex gap-2">
         <button
           onClick={handleSubmit}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 cursor-pointer"
           disabled={isLoading}
         >
           {isLoading ? "Añadiendo..." : "Añadir"}
         </button>
         <button
           onClick={handleCancel}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 cursor-pointer"
           disabled={isLoading}
         >
           Cancelar

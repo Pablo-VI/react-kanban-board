@@ -152,7 +152,7 @@ export function Column({
 
       <div
         ref={scrollableContainerRef}
-        className="p-3 pt-0 pb-0 space-y-3 overflow-y-auto flex-grow hide-scrollbar"
+        className="p-3 pt-1 pb-0 space-y-3 overflow-y-auto flex-grow hide-scrollbar"
       >
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (

@@ -111,9 +111,9 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
             id="isDone"
             checked={isDone}
             onChange={(e) => setIsDone(e.target.checked)}
-            className="w-4 h-4 rounded accent-emerald-500"
+            className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
           />
-          <label htmlFor="isDone" className="text-zinc-300">
+          <label htmlFor="isDone" className="text-zinc-300 cursor-pointer">
             Completada
           </label>
         </div>
@@ -121,13 +121,13 @@ export function TaskModal({ isOpen, onClose, task }: TaskModalProps) {
         <div className="mt-6 flex justify-end gap-4">
           <button
             onClick={onClose}
-            className="bg-zinc-600 hover:bg-zinc-700 py-2 px-4 rounded"
+            className="bg-zinc-600 hover:bg-zinc-700 py-2 px-4 rounded cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded"
+            className="bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded cursor-pointer"
           >
             Guardar
           </button>

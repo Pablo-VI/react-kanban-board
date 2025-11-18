@@ -248,7 +248,7 @@ export function AuthPage() {
                 className={`px-4 py-2 rounded-l-md focus:outline-none transition-colors duration-300 ${
                   tab === "signup"
                     ? "bg-blue-600 text-white"
-                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600 cursor-pointer"
                 }`}
               >
                 Registrarse
@@ -261,7 +261,7 @@ export function AuthPage() {
                 className={`px-4 py-2 rounded-r-md focus:outline-none transition-colors duration-300 ${
                   tab === "login"
                     ? "bg-blue-600 text-white"
-                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600 cursor-pointer"
                 }`}
               >
                 Iniciar Sesión
@@ -298,7 +298,7 @@ export function AuthPage() {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none"
+                    className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none cursor-pointer"
                     aria-label={
                       showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
                     }
@@ -309,7 +309,7 @@ export function AuthPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-700 text-white py-2 rounded-md hover:opacity-90 transition-opacity duration-300 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-700 text-white py-2 rounded-md hover:opacity-90 transition-opacity duration-300 disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? "Registrando..." : "Crear Cuenta"}
                 </button>
@@ -346,7 +346,7 @@ export function AuthPage() {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none"
+                    className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-200 focus:outline-none cursor-pointer"
                     aria-label={
                       showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
                     }
@@ -357,7 +357,7 @@ export function AuthPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-700 text-white py-2 rounded-md hover:opacity-90 transition-opacity duration-300 disabled:opacity-50"
+                  className="cursor-pointer w-full bg-gradient-to-r from-blue-600 to-purple-700 text-white py-2 rounded-md hover:opacity-90 transition-opacity duration-300 disabled:opacity-50"
                 >
                   {loading ? "Iniciando..." : "Iniciar Sesión"}
                 </button>
@@ -379,14 +379,14 @@ export function AuthPage() {
                 <button
                   onClick={() => handleOAuthLogin("google")}
                   disabled={loading}
-                  className="flex items-center justify-center w-full sm:w-auto bg-zinc-700 text-white px-4 py-2 rounded-md hover:bg-zinc-600 transition-colors duration-300 disabled:opacity-50"
+                  className="flex items-center justify-center w-full sm:w-auto bg-zinc-700 text-white px-4 py-2 rounded-md hover:bg-zinc-600 transition-colors duration-300 disabled:opacity-50 cursor-pointer"
                 >
                   <GoogleIcon /> Google
                 </button>
                 <button
                   onClick={() => handleOAuthLogin("github")}
                   disabled={loading}
-                  className="flex items-center justify-center w-full sm:w-auto bg-zinc-900 border border-zinc-700 text-white px-4 py-2 rounded-md hover:bg-black transition-colors duration-300 disabled:opacity-50"
+                  className="flex items-center justify-center w-full sm:w-auto bg-zinc-900 border border-zinc-700 text-white px-4 py-2 rounded-md hover:bg-black transition-colors duration-300 disabled:opacity-50 cursor-pointer"
                 >
                   <GitHubIcon /> GitHub
                 </button>

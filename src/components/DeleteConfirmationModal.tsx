@@ -58,13 +58,13 @@ export function DeleteConfirmationModal({
         <div className="flex justify-end gap-4">
           <button
             onClick={onClose}
-            className="bg-zinc-600 hover:bg-zinc-700 py-2 px-4 rounded transition-colors"
+            className="bg-zinc-600 hover:bg-zinc-700 py-2 px-4 rounded transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700 py-2 px-4 rounded transition-colors"
+            className="bg-red-600 hover:bg-red-700 py-2 px-4 rounded transition-colors cursor-pointer"
           >
             Eliminar
           </button>

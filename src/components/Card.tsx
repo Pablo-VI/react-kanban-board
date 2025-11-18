@@ -106,7 +106,7 @@ export const Card: React.FC<CardProps> = ({
         className="absolute top-[calc(var(--spacing)*4.2)] right-2 p-1 
                    opacity-0 group-hover:opacity-100 
                    text-gray-400 hover:text-red-500 active:text-red-700
-                   transition-opacity duration-150 focus:outline-none"
+                   transition-opacity duration-150 focus:outline-none cursor-pointer"
         aria-label={`Eliminar tarea ${card.title}`}
       >
         <svg

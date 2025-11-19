@@ -263,8 +263,13 @@ export function AuthPage() {
   const handleOAuthLogin = async (provider: "google" | "github") => {
     setLoading(true);
     sessionStorage.setItem("login_event", "true");
+
+    const redirectTo = window.location.origin + import.meta.env.BASE_URL;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: provider,
+      options: {
+        redirectTo: redirectTo,
+      },
     });
     if (oauthError) {
       sessionStorage.removeItem("login_event");

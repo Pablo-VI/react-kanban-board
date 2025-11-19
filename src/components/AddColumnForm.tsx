@@ -94,7 +94,7 @@ export function AddColumnForm() {
         onClick={() => setIsAdding(true)}
         className="w-72 flex-shrink-0 bg-zinc-800/50 hover:bg-zinc-800/80 text-white font-bold px-4 rounded h-[76px] flex items-center justify-center cursor-pointer"
       >
-        + Añadir otra columna
+        + Añadir columna
       </button>
     );
   }

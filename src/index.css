@@ -1,11 +1,21 @@
 @import "tailwindcss";
 
-/* Para Firefox */
-.hide-scrollbar {
-  scrollbar-width: none; /* Oculta la barra en Firefox */
+
+
+::-webkit-scrollbar {
+  height: 3px; /* Altura para scroll horizontal */
+  width: 0px;  /* Ancho para scroll vertical */
 }
 
-/* Para Chrome, Safari y Edge */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Oculta la barra en WebKit */
+::-webkit-scrollbar-track {
+  background: #18181b; /* zinc-950 (fondo) */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #5a5ac0; /* zinc-700 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1b94c4; /* zinc-600 */
 }

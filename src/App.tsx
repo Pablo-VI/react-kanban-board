@@ -127,6 +127,7 @@ function Board() {
   >(null); // Tarjeta siendo arrastrada
 
   // Estados de Modales
+  const [isBoardLoading, setIsBoardLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CardType | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -137,7 +138,11 @@ function Board() {
 
   // Carga inicial del tablero
   useEffect(() => {
-    fetchBoard();
+    const loadData = async () => {
+      await fetchBoard();
+      setIsBoardLoading(false);
+    };
+    loadData();
   }, [fetchBoard]);
 
   /* 3.2. Sincronización de Datos (Realtime) */
@@ -378,6 +383,16 @@ function Board() {
 
     // Enviar actualización a Supabase
     _updateCardOrders(cardsToUpdate);
+  }
+
+  if (isBoardLoading) {
+    return (
+      <div className="bg-zinc-950 text-white min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-xl font-bold text-zinc-500">
+          Cargando tu tablero...
+        </div>
+      </div>
+    );
   }
 
   /* 3.5. Renderizado del Tablero */

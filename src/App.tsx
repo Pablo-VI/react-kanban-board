@@ -43,6 +43,7 @@ import { AuthPage } from "./components/AuthPage";
 import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import type { Session } from "@supabase/supabase-js";
 import { Toaster, toast } from "react-hot-toast";
+import Logo from "./assets/Logo.svg"; // 👈 Importa el archivo
 
 /* 2. Componente Principal App */
 function App() {
@@ -99,8 +100,27 @@ function App() {
           },
         }}
       />
-      {/* Renderizado Condicional: Auth o Tablero */}
-      {!session ? <AuthPage /> : <Board key={session.user.id} />}
+
+      {/* 📱 1. AVISO PARA MÓVILES (Visible solo en pantallas pequeñas 'md:hidden') */}
+      <div className="md:hidden flex flex-col items-center justify-center h-screen bg-zinc-950 text-white p-8 text-center">
+        <div className="bg-zinc-800 p-6 rounded-lg shadow-xl border border-zinc-700">
+          <h1 className="text-2xl font-bold mb-4">💻 Solo Escritorio</h1>
+          <p className="text-zinc-400">
+            Kanba está diseñado para gestionar grandes tableros y necesita
+            espacio.
+          </p>
+          <p className="mt-4 text-zinc-300 font-medium">
+            Por favor, abre la aplicación en un ordenador o tablet grande para
+            la mejor experiencia.
+          </p>
+        </div>
+      </div>
+
+      {/* 💻 2. APP COMPLETA (Oculta en móvil 'hidden', visible en escritorio 'md:block') */}
+      <div className="hidden md:block h-screen">
+        {/* Renderizado Condicional: Auth o Tablero */}
+        {!session ? <AuthPage /> : <Board key={session.user.id} />}
+      </div>
     </>
   );
 }
@@ -406,7 +426,7 @@ function Board() {
       <div className="bg-zinc-950 text-white min-h-screen flex flex-col overflow-hidden">
         {/* Cabecera */}
         <header className="flex items-center justify-between p-8 pb-0 flex-shrink-0">
-          <h1 className="text-3xl font-bold">Mi tablero</h1>
+          <img src={Logo} alt="Logo Kanba" className="h-12 w-auto" />
           <div className="flex items-center gap-4">
             <button
               onClick={handleSignOut}

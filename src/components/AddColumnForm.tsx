@@ -1,51 +1,137 @@
 // src/components/AddColumnForm.tsx
-import { useState } from "react";
+
+/**
+ * ÍNDICE DE CONTENIDOS
+ * ------------------------------------------------------------------
+ * 1. Importaciones
+ * 2. Definición del Componente y Estado
+ * 3. Manejadores de Eventos (Submit, Cancel, KeyDown)
+ * 4. Efectos Secundarios (Click Outside)
+ * 5. Renderizado: Botón de Apertura (Estado Inactivo)
+ * 6. Renderizado: Formulario de Creación (Estado Activo)
+ * ------------------------------------------------------------------
+ */
+
+/* 1. Importaciones */
+import {
+  useState,
+  useRef,
+  useEffect,
+  type KeyboardEvent,
+  useCallback,
+} from "react";
 import { useBoardStore } from "../store";
 
+/* 2. Definición del Componente y Estado */
 export function AddColumnForm() {
+  // Conexión con el Store global
   const addColumn = useBoardStore((state) => state.addColumn);
-  const [isAdding, setIsAdding] = useState(false);
-  const [title, setTitle] = useState("");
 
-  const handleSubmit = () => {
-    if (title.trim() !== "") {
-      addColumn(title);
+  // Estados locales
+  const [isAdding, setIsAdding] = useState(false); // Controla si se muestra el botón o el formulario
+  const [title, setTitle] = useState(""); // Valor del input del título
+  const [isLoading, setIsLoading] = useState(false); // Estado de carga para evitar envíos múltiples
+
+  // Referencia al contenedor del formulario para detectar clics fuera
+  const formRef = useRef<HTMLDivElement>(null);
+
+  /* 3. Manejadores de Eventos */
+
+  // Envía la petición para crear la columna
+  const handleSubmit = async () => {
+    // Validación simple y prevención de doble envío
+    if (title.trim() === "" || isLoading) return;
+
+    setIsLoading(true);
+    const success = await addColumn(title);
+    setIsLoading(false);
+
+    // Si se creó correctamente, reseteamos el estado
+    if (success) {
       setTitle("");
       setIsAdding(false);
     }
   };
 
+  // Cancela la acción y cierra el formulario
+  const handleCancel = useCallback(() => {
+    if (isLoading) return; // No cancelar si se está enviando
+    setIsAdding(false);
+    setTitle("");
+  }, [isLoading]);
+
+  // Manejo de atajos de teclado dentro del input
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSubmit();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
+
+  /* 4. Efectos Secundarios */
+
+  // Detecta clics fuera del formulario para cerrarlo automáticamente
+  useEffect(() => {
+    if (!isAdding) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        handleCancel();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAdding, handleCancel]);
+
+  /* 5. Renderizado: Botón de Apertura (Estado Inactivo) */
   if (!isAdding) {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="w-72 flex-shrink-0 bg-zinc-800/50 hover:bg-zinc-800/80 text-white font-bold py-2 px-4 rounded"
+        className="w-72 flex-shrink-0 bg-zinc-800/50 hover:bg-zinc-800/80 text-white font-bold px-4 rounded h-[76px] flex items-center justify-center cursor-pointer"
       >
-        + Añadir otra columna
+        + Añadir columna
       </button>
     );
   }
 
+  /* 6. Renderizado: Formulario de Creación (Estado Activo) */
   return (
-    <div className="w-72 flex-shrink-0 bg-zinc-900 p-3 rounded-md">
+    <div
+      ref={formRef}
+      className="w-72 flex-shrink-0 bg-zinc-900 p-3 rounded-md h-[112px] flex flex-col justify-between"
+    >
       <input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="Introduce el título de la columna..."
-        autoFocus
+        autoFocus // Foco automático al abrir
         className="bg-zinc-700 text-white p-2 rounded w-full mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        maxLength={40} // Límite de caracteres
+        disabled={isLoading}
       />
+
       <div className="flex gap-2">
+        {/* Botón Confirmar */}
         <button
           onClick={handleSubmit}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 cursor-pointer"
+          disabled={isLoading}
         >
-          Añadir
+          {isLoading ? "Añadiendo..." : "Añadir"}
         </button>
+
+        {/* Botón Cancelar */}
         <button
-          onClick={() => setIsAdding(false)}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          onClick={handleCancel}
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 cursor-pointer"
+          disabled={isLoading}
         >
           Cancelar
         </button>

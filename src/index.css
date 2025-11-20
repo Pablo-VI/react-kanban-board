@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+
+
+::-webkit-scrollbar {
+  height: 3px; /* Altura para scroll horizontal */
+  width: 0px;  /* Ancho para scroll vertical */
+}
+
+::-webkit-scrollbar-track {
+  background: #18181b; /* zinc-950 (fondo) */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #5a5ac0; /* zinc-700 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1b94c4; /* zinc-600 */
+}

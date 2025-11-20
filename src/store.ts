@@ -1,11 +1,35 @@
 // src/store.ts
+
+/**
+ * ÍNDICE DE CONTENIDOS
+ * ------------------------------------------------------------------
+ * 1. Importaciones
+ * 2. Definición de Tipos (Card, Column, BoardState)
+ * 3. Creación del Store de Zustand
+ * 3.1. Estado Inicial
+ * 3.2. Setters Simples
+ * 3.3. Acciones Asíncronas (Interacciones con Supabase)
+ * 3.3.1. Fetch Board (Carga Inicial)
+ * 3.3.2. Add Column / Add Card
+ * 3.3.3. Edit Card / Toggle Card Done
+ * 3.3.4. Delete Card / Delete Column
+ * 3.3.5. Rename Column
+ * 3.3.6. Update Card Orders (Reordenamiento)
+ * ------------------------------------------------------------------
+ */
+
+/* 1. Importaciones */
 import { create } from "zustand";
 import { supabase } from "./supabase";
+import { toast } from "react-hot-toast";
 
+/* 2. Definición de Tipos */
 export type Card = {
   id: string;
   title: string;
   description?: string;
+  card_order?: number;
+  is_done: boolean;
 };
 
 export type Column = {
@@ -16,44 +40,63 @@ export type Column = {
 
 type BoardState = {
   columns: Column[];
+  // Acciones
   fetchBoard: () => Promise<void>;
-  addColumn: (title: string) => Promise<void>;
+  addColumn: (title: string) => Promise<boolean>;
   addCard: (
     columnId: string,
     title: string,
     description?: string
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   editCard: (
-    columnId: string,
     cardId: string,
     title: string,
+    isDone: boolean,
     description?: string
   ) => Promise<void>;
-  deleteCard: (columnId: string, cardId: string) => Promise<void>;
-  moveCard: (
-    cardId: string,
-    sourceColumnId: string,
-    destColumnId: string,
-    destIndex: number
-  ) => void;
-  reorderCard: (
-    columnId: string,
-    sourceIndex: number,
-    destIndex: number
-  ) => void;
+  deleteCard: (cardId: string) => Promise<void>;
+  deleteColumn: (columnId: string) => Promise<void>;
+  renameColumn: (columnId: string, newTitle: string) => Promise<void>;
+  setColumns: (newColumns: Column[]) => void;
+  _updateCardOrders: (
+    cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
+  ) => Promise<void>;
+  toggleCardDone: (cardId: string, isDone: boolean) => Promise<void>;
 };
 
-export const useBoardStore = create<BoardState>((set) => ({
+/* 3. Creación del Store de Zustand */
+export const useBoardStore = create<BoardState>((set, get) => ({
+  /* 3.1. Estado Inicial */
   columns: [],
 
+  /* 3.2. Setters Simples */
+  setColumns: (newColumns) => set({ columns: newColumns }),
+
+  /* 3.3. Acciones Asíncronas */
+
+  /* 3.3.1. Fetch Board */
   fetchBoard: async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      set({ columns: [] });
+      return;
+    }
+
+    // Consulta relacional: Columnas -> Tarjetas
     const { data: columnsData, error } = await supabase
       .from("columns")
-      .select("id, title, cards ( id, title, description )")
-      .order("id", { ascending: true });
+      .select(
+        "id, title, cards ( id, title, description, card_order, is_done )"
+      )
+      .eq("user_id", user.id)
+      .order("id", { ascending: true })
+      .order("card_order", { foreignTable: "cards", ascending: true });
 
     if (error) {
-      console.error("Error al cargar el tablero:", error);
+      toast.error("Error al cargar el tablero: " + error.message);
       return;
     }
     if (!columnsData) {
@@ -61,6 +104,7 @@ export const useBoardStore = create<BoardState>((set) => ({
       return;
     }
 
+    // Formateo de IDs a string para compatibilidad con DnD Kit
     const formattedColumns: Column[] = columnsData.map((col) => ({
       ...col,
       id: col.id.toString(),
@@ -69,143 +113,168 @@ export const useBoardStore = create<BoardState>((set) => ({
         id: card.id.toString(),
       })),
     }));
+
     set({ columns: formattedColumns });
   },
 
+  /* 3.3.2. Add Column / Add Card */
   addColumn: async (title) => {
-    const { data, error } = await supabase
-      .from("columns")
-      .insert({ title: title })
-      .select()
-      .single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (error || !data) {
-      console.error("Error al añadir columna:", error);
-      return;
+    if (!user) {
+      toast.error("Debes iniciar sesión para añadir una columna.");
+      return false;
     }
 
-    const newColumn: Column = {
-      id: data.id.toString(),
-      title: data.title,
-      cards: [],
-    };
-    set((state) => ({ columns: [...state.columns, newColumn] }));
+    const { error } = await supabase
+      .from("columns")
+      .insert({ title: title, user_id: user.id });
+
+    if (error) {
+      toast.error("Error al crear la columna: " + error.message);
+      return false;
+    }
+
+    toast.success("Columna creada");
+    return true;
   },
 
   addCard: async (columnId, title, description) => {
-    const { data, error } = await supabase
-      .from("cards")
-      .insert({ title, description, column_id: parseInt(columnId) })
-      .select()
-      .single();
+    const { columns } = get();
+    const targetColumn = columns.find((c) => c.id === columnId);
 
-    if (error || !data) {
-      console.error("Error al añadir tarjeta:", error);
-      return;
+    if (!targetColumn) {
+      toast.error("Error: Columna de destino no encontrada.");
+      return false;
     }
 
-    const newCard: Card = {
-      id: data.id.toString(),
-      title: data.title,
-      description: data.description || undefined,
-    };
-    set((state) => {
-      const newColumns = state.columns.map((col) => {
-        if (col.id === columnId) {
-          return { ...col, cards: [...col.cards, newCard] };
-        }
-        return col;
-      });
-      return { columns: newColumns };
+    // La nueva tarjeta va al final de la lista
+    const newOrder = targetColumn.cards.length;
+
+    const { error } = await supabase.from("cards").insert({
+      title,
+      description,
+      column_id: parseInt(columnId),
+      card_order: newOrder,
+      is_done: false,
     });
+
+    if (error) {
+      toast.error("Error al crear la tarjeta: " + error.message);
+      return false;
+    }
+
+    toast.success("Tarjeta creada");
+    return true;
   },
 
-  editCard: async (columnId, cardId, title, description) => {
+  /* 3.3.3. Edit Card / Toggle Card Done */
+  editCard: async (cardId, title, isDone, description) => {
     const { error } = await supabase
       .from("cards")
-      .update({ title, description })
+      .update({ title, is_done: isDone, description })
       .eq("id", parseInt(cardId));
 
     if (error) {
-      console.error("Error al editar tarjeta:", error);
-      return;
+      toast.error("Error al guardar la tarjeta: " + error.message);
+    } else {
+      toast.success("Tarjeta guardada");
     }
-
-    set((state) => {
-      const newColumns = state.columns.map((column) => {
-        if (column.id === columnId) {
-          const newCards = column.cards.map((card) => {
-            if (card.id === cardId) {
-              return { ...card, title, description };
-            }
-            return card;
-          });
-          return { ...column, cards: newCards };
-        }
-        return column;
-      });
-      return { columns: newColumns };
-    });
   },
 
-  deleteCard: async (columnId, cardId) => {
+  toggleCardDone: async (cardId: string, isDone: boolean) => {
+    const { error } = await supabase
+      .from("cards")
+      .update({ is_done: isDone })
+      .eq("id", parseInt(cardId));
+
+    if (error) {
+      toast.error("Error al actualizar la tarjeta: " + error.message);
+    } else {
+      toast.success("Tarjeta actualizada");
+    }
+  },
+
+  /* 3.3.4. Delete Card / Delete Column */
+  deleteCard: async (cardId) => {
     const { error } = await supabase
       .from("cards")
       .delete()
       .eq("id", parseInt(cardId));
 
     if (error) {
-      console.error("Error al borrar tarjeta:", error);
+      toast.error("Error al eliminar la tarjeta: " + error.message);
+    } else {
+      toast.success("Tarjeta eliminada");
+    }
+  },
+
+  deleteColumn: async (columnId) => {
+    // Eliminación en cascada manual (primero tarjetas, luego columna)
+    const { error: cardsError } = await supabase
+      .from("cards")
+      .delete()
+      .eq("column_id", parseInt(columnId));
+
+    if (cardsError) {
+      toast.error("Error al eliminar las tarjetas: " + cardsError.message);
       return;
     }
 
-    set((state) => {
-      const newColumns = state.columns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            cards: col.cards.filter((card) => card.id !== cardId),
-          };
-        }
-        return col;
-      });
-      return { columns: newColumns };
-    });
+    const { error: columnError } = await supabase
+      .from("columns")
+      .delete()
+      .eq("id", parseInt(columnId));
+
+    if (columnError) {
+      toast.error("Error al eliminar la columna: " + columnError.message);
+    } else {
+      toast.success("Columna eliminada");
+    }
   },
 
-  // Por ahora, estas acciones solo afectan al estado local para mantener la fluidez.
-  // Sincronizarlas con el backend es más complejo y un buen siguiente paso.
-  moveCard: (cardId, sourceColumnId, destColumnId, destIndex) =>
-    set((state) => {
-      const newColumns = [...state.columns];
-      const sourceColIndex = newColumns.findIndex(
-        (col) => col.id === sourceColumnId
-      );
-      const destColIndex = newColumns.findIndex(
-        (col) => col.id === destColumnId
-      );
-      if (sourceColIndex === -1 || destColIndex === -1) return state;
-      const sourceCol = { ...newColumns[sourceColIndex] };
-      const cardIndex = sourceCol.cards.findIndex((card) => card.id === cardId);
-      if (cardIndex === -1) return state;
-      const [movedCard] = sourceCol.cards.splice(cardIndex, 1);
-      newColumns[sourceColIndex] = sourceCol;
-      const destCol = { ...newColumns[destColIndex] };
-      destCol.cards.splice(destIndex, 0, movedCard);
-      newColumns[destColIndex] = destCol;
-      return { columns: newColumns };
-    }),
+  /* 3.3.5. Rename Column */
+  renameColumn: async (columnId: string, newTitle: string) => {
+    const { error } = await supabase
+      .from("columns")
+      .update({ title: newTitle })
+      .eq("id", parseInt(columnId));
 
-  reorderCard: (columnId, sourceIndex, destIndex) =>
-    set((state) => {
-      const newColumns = [...state.columns];
-      const colIndex = newColumns.findIndex((col) => col.id === columnId);
-      if (colIndex === -1) return state;
-      const column = { ...newColumns[colIndex] };
-      const newCards = [...column.cards];
-      const [movedCard] = newCards.splice(sourceIndex, 1);
-      newCards.splice(destIndex, 0, movedCard);
-      newColumns[colIndex] = { ...column, cards: newCards };
-      return { columns: newColumns };
-    }),
+    if (error) {
+      toast.error("Error al renombrar la columna: " + error.message);
+    } else {
+      toast.success("Columna renombrada");
+    }
+  },
+
+  /* 3.3.6. Update Card Orders */
+  _updateCardOrders: async (
+    cardsToUpdate: { id: string; card_order: number; column_id?: number }[]
+  ) => {
+    if (cardsToUpdate.length === 0) return;
+
+    // Actualización secuencial para garantizar integridad
+    for (const card of cardsToUpdate) {
+      const updateData: { card_order: number; column_id?: number } = {
+        card_order: card.card_order,
+      };
+
+      if (card.column_id !== undefined) {
+        updateData.column_id = card.column_id;
+      }
+
+      const { error } = await supabase
+        .from("cards")
+        .update(updateData)
+        .eq("id", parseInt(card.id));
+
+      if (error) {
+        console.error("Error updating card order:", error);
+        toast.error("Error al sincronizar el orden.");
+        break; // Detener en caso de error crítico
+      }
+    }
+  },
 }));

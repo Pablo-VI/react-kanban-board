@@ -43,7 +43,7 @@ import { AuthPage } from "./components/AuthPage";
 import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import type { Session } from "@supabase/supabase-js";
 import { Toaster, toast } from "react-hot-toast";
-import Logo from "./assets/Logo.svg"; // 👈 Importa el archivo
+import Favicon from "./assets/Favicon.svg";
 
 /* 2. Componente Principal App */
 function App() {
@@ -426,7 +426,23 @@ function Board() {
       <div className="bg-zinc-950 text-white min-h-screen flex flex-col overflow-hidden">
         {/* Cabecera */}
         <header className="flex items-center justify-between p-8 pb-0 flex-shrink-0">
-          <img src={Logo} alt="Logo Kanba" className="h-12 w-auto" />
+          <div className="flex items-center gap-4">
+            <img
+              src={Favicon}
+              alt="Logo Kanba"
+              className="h-10 w-auto"
+            />
+            <h1
+              className="font-inter text-6xl font-semibold text-white"
+              style={{
+                fontSize: '2.6rem',
+                WebkitTextStroke: "3px black",
+                paintOrder: "stroke fill",
+              }}
+            >
+              Kanba
+            </h1>
+          </div>
           <div className="flex items-center gap-4">
             <button
               onClick={handleSignOut}

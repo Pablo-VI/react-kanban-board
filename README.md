@@ -25,7 +25,7 @@
 
 ## 📋 Descripción
 
-**Kanba** es una aplicación de gestión de proyectos colaborativa inspirada en Trello, diseñada para ser rápida, intuitiva y robusta. 
+**Kanba** es una aplicación de gestión de proyectos inspirada en Trello, diseñada para ser rápida, intuitiva y robusta. 
 
 A diferencia de una simple "To-Do List", Kanba implementa un sistema complejo de **Drag and Drop**, sincronización de datos en **tiempo real** y autenticación segura. Está construida con las mejores prácticas de **React** y **TypeScript**, demostrando una arquitectura escalable y limpia.
 
